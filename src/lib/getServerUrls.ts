@@ -8,8 +8,8 @@ interface ServerUrls {
   contentApiUrl: URL
   spellcheckUrl: URL
   userUrl: URL
-  faroUrl: URL
-  baboonUrl: URL
+  faroUrl?: URL
+  baboonUrl?: URL
 }
 
 export async function getServerUrls(): Promise<ServerUrls> {
@@ -21,14 +21,15 @@ export async function getServerUrls(): Promise<ServerUrls> {
 
   try {
     const servers = await response.json() as Record<string, string>
-    const attributes = [
+    const requiredAttributes = [
       'webSocketUrl', 'indexUrl', 'repositoryUrl', 'contentApiUrl',
-      'spellcheckUrl', 'userUrl', 'faroUrl', 'baboonUrl'
+      'spellcheckUrl', 'userUrl'
     ]
+    const optionalAttributes = ['faroUrl', 'baboonUrl']
 
     const urls = {} as Record<string, URL>
 
-    for (const field of attributes) {
+    for (const field of requiredAttributes) {
       const value = servers[field]
 
       if (typeof value != 'string' || value == '') {
@@ -36,6 +37,13 @@ export async function getServerUrls(): Promise<ServerUrls> {
       }
 
       urls[field] = new URL(value)
+    }
+
+    for (const field of optionalAttributes) {
+      const value = servers[field]
+      if (typeof value === 'string' && value !== '') {
+        urls[field] = new URL(value)
+      }
     }
 
     return {

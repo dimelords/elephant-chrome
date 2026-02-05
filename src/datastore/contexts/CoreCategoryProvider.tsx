@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useIndexedDB } from '../hooks/useIndexedDB'
 import { fetchOrRefresh } from '../lib/fetchOrRefresh'
 import { type IDBCategory } from '../types'
-import { type IndexedCategory } from '@/lib/index'
+import { type IndexHit } from '@/lib/index/schemas/common'
 
 interface CoreCategoryProviderState {
   objects: IDBCategory[]
@@ -31,17 +31,17 @@ export const CoreCategoryProvider = ({ children }: {
       return
     }
 
-    const cachedObjects = await fetchOrRefresh<IDBCategory, IndexedCategory>(
+    const cachedObjects = await fetchOrRefresh<IDBCategory, IndexHit>(
       IDB,
       documentType,
       indexUrl,
       data.accessToken,
       force,
       (item) => {
-        const { _id: id, _source: _ } = item
+        const { id, source } = item
         return {
           id,
-          title: _['document.title'][0].trim()
+          title: source?.['document.title']?.values?.[0]?.trim() || ''
         }
       }
     )

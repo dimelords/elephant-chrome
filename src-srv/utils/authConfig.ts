@@ -4,15 +4,33 @@ import { type JWT } from '@auth/core/jwt'
 import type pino from 'pino'
 
 const scopes = [
+  // Standard OIDC (built-in to Keycloak)
   'openid',
   'profile',
   'email',
-  'search',
+
+  // Document operations
   'doc_read',
+  'doc_read_all',      // Dev: bypass ACL for debugging
   'doc_write',
   'doc_delete',
+
+  // Schema management
+  'schema_read',
+  'schema_admin',      // Dev: needed for loading schemas
+
+  // Search and indexing
+  'search',
+
+  // Events and workflows
   'eventlog_read',
+  'workflow_admin',    // Dev: manage workflows
+
+  // Metrics and monitoring
   'metrics_read',
+  'metrics_admin',
+
+  // Other services
   'user',
   'baboon',
   'media',
@@ -146,7 +164,9 @@ async function refreshAccessToken(
     })
 
     if (!response.ok) {
-      throw new Error(`refresh request error response: ${response.statusText}`)
+      // Common error - session expired, user needs to re-login
+      const errorBody = await response.text().catch(() => 'Unable to read error')
+      throw new Error(`Token refresh failed (${response.status}): ${response.statusText}. Body: ${errorBody}`)
     }
 
     const refreshedTokens = await response.json().catch((e) => {
@@ -164,10 +184,12 @@ async function refreshAccessToken(
       refreshToken: refreshedTokens.refresh_token ?? token.refreshToken
     }
   } catch (ex) {
-    logger.error({
+    // Token refresh failures are common when sessions expire
+    // Log as warning instead of error to reduce noise
+    logger.warn({
       err: ex,
       sub: token.sub
-    }, 'failed to refresh token')
+    }, 'Token refresh failed - user needs to re-authenticate')
 
     return { ...token, error: 'refreshAccessTokenError' }
   }

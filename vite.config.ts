@@ -69,7 +69,7 @@ export default defineConfig(({ mode }) => {
       port: devServerPort
     },
     optimizeDeps: {
-      include: ['date-fns']
+      include: ['date-fns', '@ttab/api-client']
     },
     test: {
       env,

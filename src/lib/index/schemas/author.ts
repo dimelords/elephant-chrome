@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { BaseSchema } from './base'
+import type { Document } from '@ttab/elephant-api/newsdoc'
 
 const AuthorSchema = z.object({
   _source: z.object({
@@ -15,3 +16,13 @@ const AuthorSchema = z.object({
 
 const _FullAuthorSchema = BaseSchema.and(AuthorSchema)
 export type IndexedAuthor = z.infer<typeof _FullAuthorSchema>
+
+// New type for Index client response (with NewsDoc document)
+export interface IndexAuthorHit {
+  id: string
+  score: number
+  document?: Document
+  source?: Record<string, { values: string[] }>
+  fields?: Record<string, { values: string[] }>
+  sort?: string[]
+}

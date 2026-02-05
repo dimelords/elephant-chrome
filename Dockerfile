@@ -2,28 +2,36 @@ FROM node:24.13.0-slim AS build
 
 ARG npm_authtoken
 
-RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
-COPY package.json package-lock.json tsconfig.json /usr/src/app/
+# 1️⃣ Copy EVERYTHING first (local deps must exist)
+COPY . .
+
+# 2️⃣ Auth
 RUN echo "@ttab:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=${npm_authtoken}" >> .npmrc
+
+# 3️⃣ Install deps (file: paths now resolve)
 RUN npm ci
 
-COPY . /usr/src/app
+# 4️⃣ Build local packages explicitly
+RUN npm run build --workspaces || true
 
+# or if not workspaces:
+RUN cd elephant-ui && npm run build
+RUN cd elephant-api-npm && npm run build
+
+# 5️⃣ Build main app
 RUN npm run build
 
-RUN rm -fr node_modules && \
-  npm ci --include prod && \
-  rm -f .npmrc
+# 6️⃣ Prune dev deps
+RUN npm prune --omit=dev && rm -f .npmrc
+
 
 FROM node:24.13.0-slim
-
-RUN apt-get update && apt-get upgrade -y && apt-get clean
 
 WORKDIR /usr/src/app
 
 COPY --from=build /usr/src/app /usr/src/app
 
 EXPOSE 5183
-CMD [ "npm", "start" ]
+CMD ["npm", "start"]

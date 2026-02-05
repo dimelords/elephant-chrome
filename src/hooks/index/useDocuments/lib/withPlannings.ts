@@ -15,6 +15,9 @@ export async function withPlannings<T extends HitV1>({ hits, session, index }: {
 
   const eventIDs: string[] = hits.map((hit) => hit.id)
 
+  // If no events, return early to avoid invalid query
+  if (eventIDs.length === 0) return hits
+
   const plannings = await fetch<HitV1, withPlanningsFields>({
     documentType: 'core/planning-item',
     index,

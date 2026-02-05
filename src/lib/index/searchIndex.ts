@@ -1,19 +1,10 @@
-import { pagination } from '../pagination'
+import { Index } from '@/shared/Index'
+import { QueryV1 } from '@ttab/elephant-api/index'
 
-interface SearchIndexOptions {
-  accessToken: string
-  index: string
-  endpoint: URL
-  useCache?: boolean
-  assignmentSearch?: boolean
-}
 
 export interface SearchIndexResult<T> {
   ok: boolean
   total: number
-  page: number
-  pages: number
-  pageSize: number
   hits: T[]
 }
 
@@ -21,83 +12,51 @@ export interface SearchIndexError {
   ok: false
   errorCode: number
   errorMessage: string
-  total: 0
-  pages: 0
   hits: never[]
 }
 
 export type SearchIndexResponse<T> = SearchIndexError | SearchIndexResult<T>
 
-/**
- * @deprecated This function is deprecated and will be removed in future versions.
- * TODO: use Twirp api and wrap in a hook #ELE-1171
- * @param search - object
- * @param options - SearchIndexOptions
- * @param page - number Optional, defaults to 1
- * @param size - number Optionally wanted page size, defaults to 100
- * @returns Promise<SearchIndexResponse>
- */
-export async function searchIndex<T>(search: object, options: SearchIndexOptions, page: number = 1, size: number = 100): Promise<SearchIndexResponse<T>> {
-  const endpoint = options?.assignmentSearch
-    ? options.endpoint
-    : new URL(`${options.index.replace(/[/-]/g, '_')}/_search`, options.endpoint)
-  const { from, pageSize } = pagination({
-    page,
-    size
-  })
-
-  const body = JSON.stringify({
-    from,
-    size: pageSize,
-    ...search
-  })
-
-  const response = await fetch(endpoint.href, {
-    method: 'POST',
-    headers: headers(options.accessToken),
-    body
-  })
-
-  if (response.status !== 200) {
-    return responseError(response.status, response.statusText)
+export async function searchIndex<T, TFields = Record<string, unknown>>(
+  documentType: string,
+  options: {
+    endpoint: URL
+    accessToken: string
+    size?: number
+    from?: number
+    query?: QueryV1
+    language?: string
   }
-
+): Promise<SearchIndexResponse<T>> {
   try {
-    const body = await response.json()
+    const client = new Index(options.endpoint.href)
 
-    const total = body?.hits?.total?.value || 0
-    const hits = body?.hits?.hits?.length || 0
-
-    const result = {
+    const result = await client.query<T, TFields>({
+      accessToken: options.accessToken,
+      documentType,
+      loadDocument: false,
+      loadSource: true,
+      size: Math.min(options.size || 100, 200),
+      from: options.from || 0,
+      query: options.query || QueryV1.create({
+        conditions: {
+          oneofKind: 'matchAll',
+          matchAll: {}
+        }
+      })
+    })
+    return {
       ok: true,
-      total: body?.hits?.total?.value || 0,
-      page: page || 1,
-      pages: hits > 0 ? Math.ceil(total / pageSize) : 0,
-      pageSize,
-      hits: hits ? body.hits.hits : []
+      total: result.total || 0,
+      hits: result.hits || []
     }
-
-    return result
-  } catch (ex: unknown) {
-    return responseError(0, ex instanceof Error && ex.message ? ex.message : 'Error message not defined')
-  }
-}
-
-
-function headers(accessToken: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${accessToken}`,
-    'Content-Type': 'application/json'
-  }
-}
-
-function responseError(errorCode: number, errorMessage: string): SearchIndexError {
-  return {
-    ok: false,
-    errorCode,
-    errorMessage,
-    total: 0,
-    pages: 0,
-    hits: []
+  } catch (error) {
+    console.error('Search index error:', error)
+    return {
+      ok: false,
+      errorCode: 500,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      hits: []
+    }
   }
 }

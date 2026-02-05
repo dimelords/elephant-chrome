@@ -18,7 +18,7 @@ export const ViewDialogClose = ({ ydoc, onClick, Icon = XIcon, asDialog }: {
   asDialog?: boolean
 }): JSX.Element => {
   const [showVerifyDialog, setShowVerifyDialog] = useState(false)
-  const [documentStatus] = useWorkflowStatus({ documentId: ydoc?.id })
+  const [documentStatus] = useWorkflowStatus({ ydoc })
 
   const asSave = (documentStatus?.type
     ? WorkflowSpecifications[documentStatus.type][documentStatus.name].asSave && ydoc?.isChanged

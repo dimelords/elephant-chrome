@@ -20,8 +20,8 @@ export function WebSocketProvider({ url, children }: PropsWithChildren & {
     })
 
     wsp.current.on('error', (error: Error) => {
-      console.info('⚠️ WebSocket provider error', error)
-      setIsConnected(true)
+      console.error('⚠️ WebSocket provider error', error)
+      setIsConnected(false)
     })
 
     wsp.current.on('open', () => {
@@ -32,6 +32,15 @@ export function WebSocketProvider({ url, children }: PropsWithChildren & {
     wsp.current.on('disconnect', ({ event }: { event?: CloseEvent }) => {
       console.warn('❌ WebSocket provider disconnected:', event?.code, event?.reason)
       setIsConnected(false)
+    })
+
+    wsp.current.on('connecting', () => {
+      console.log('🔄 WebSocket provider connecting...')
+    })
+
+    wsp.current.on('connect', () => {
+      console.log('✅ WebSocket provider connected')
+      setIsConnected(true)
     })
 
     // Connect to the WebSocket server when the provider is created

@@ -3,9 +3,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import React, { useState, useRef, type Dispatch, type SetStateAction, type JSX } from 'react'
 import type { MediaTypes } from '..'
 
-export const ImageSearchInput = ({ setQueryString, setMediaType }: {
+export const ImageSearchInput = ({ setQueryString, setMediaType, showMediaTypeToggle = false }: {
   setQueryString: Dispatch<SetStateAction<string>>
   setMediaType: Dispatch<SetStateAction<MediaTypes>>
+  showMediaTypeToggle?: boolean
 }): JSX.Element => {
   const [query, setQuery] = useState('')
 
@@ -29,15 +30,20 @@ export const ImageSearchInput = ({ setQueryString, setMediaType }: {
         ref={inputRef}
         onChange={(e) => setQuery(e.currentTarget.value)}
       />
-      <Select onValueChange={(option) => setMediaType(option as MediaTypes)}>
-        <SelectTrigger className='w-fit'>
-          <SelectValue placeholder='Bild' />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value='image'>Bild</SelectItem>
-          <SelectItem value='graphic'>Grafik</SelectItem>
-        </SelectContent>
-      </Select>
+      {showMediaTypeToggle && (
+        <Select
+          onValueChange={(option) => setMediaType(option as MediaTypes)}
+          defaultValue='image'
+        >
+          <SelectTrigger className='w-fit'>
+            <SelectValue placeholder='Bild' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='image'>Bild</SelectItem>
+            <SelectItem value='graphic'>Grafik</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
     </form>
   )
 }

@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useIndexedDB } from '../hooks/useIndexedDB'
 import { fetchOrRefresh } from '../lib/fetchOrRefresh'
 import { type IDBAuthor } from '../types'
-import { type IndexedAuthor } from '@/lib/index'
+import { type IndexAuthorHit } from '@/lib/index/schemas/author'
 
 interface CoreAuthorProviderState {
   objects: IDBAuthor[]
@@ -31,25 +31,27 @@ export const CoreAuthorProvider = ({ children }: {
       return
     }
 
-    const cachedObjects = await fetchOrRefresh<IDBAuthor, IndexedAuthor>(
+    const cachedObjects = await fetchOrRefresh<IDBAuthor, IndexAuthorHit>(
       IDB,
       documentType,
       indexUrl,
       data.accessToken,
       force,
       (item) => {
-        const { _id: id, _source: _ } = item
+        console.log(item)
+        const { id, source } = item
         return {
           id,
-          name: _['document.title'][0].trim(),
-          firstName: _?.['document.meta.core_author.data.firstName']?.[0].trim() || '',
-          lastName: _?.['document.meta.core_author.data.lastName']?.[0].trim() || '',
-          initials: _?.['document.meta.core_author.data.initials']?.[0].trim() || '',
-          email: _?.['document.meta.core_contact_info.data.email']?.[0].trim() || '',
-          sub: _?.['document.rel.same_as.uri']
+          name: source?.['document.title']?.values?.[0]?.trim() || '',
+          firstName: source?.['document.meta.core_author.data.firstName']?.values?.[0]?.trim() || '',
+          lastName: source?.['document.meta.core_author.data.lastName']?.values?.[0]?.trim() || '',
+          initials: source?.['document.meta.core_author.data.initials']?.values?.[0]?.trim() || '',
+          email: source?.['document.meta.core_contact_info.data.email']?.values?.[0]?.trim() || '',
+          sub: source?.['document.rel.same_as.uri']?.values
             ?.find((m: string) => m?.startsWith('core://user/sub'))?.trim() || ''
         }
-      }
+      },
+      'sv-se' // Authors have language-specific indices
     )
 
     if (Array.isArray(cachedObjects) && cachedObjects.length) {

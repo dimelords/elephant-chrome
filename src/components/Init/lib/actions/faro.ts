@@ -5,8 +5,12 @@ import {
 } from '@grafana/faro-react'
 
 export async function initializeFaro({ url }: {
-  url: URL
+  url?: URL
 }): Promise<boolean> {
+  if (!url) {
+    return Promise.resolve(true)
+  }
+
   try {
     initFaro({
       url: url.href,

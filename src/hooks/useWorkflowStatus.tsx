@@ -24,6 +24,7 @@ export const useWorkflowStatus = ({ ydoc, documentId: docId }: {
   const { data: session } = useSession()
 
   const documentId = docId || ydoc?.id
+  const isInProgress = ydoc?.isInProgress
 
   const CACHE_KEY = useMemo(
     () => `status/${documentId}`,
@@ -32,9 +33,9 @@ export const useWorkflowStatus = ({ ydoc, documentId: docId }: {
    * SWR callback that fetches current workflow status
    */
   const { data: documentStatus, error, mutate } = useSWR<Status | undefined, Error>(
-    (documentId && session && repository) ? [CACHE_KEY] : null,
+    // Don't fetch if document is in progress (not yet saved to repository)
+    (documentId && session && repository && !isInProgress) ? [CACHE_KEY] : null,
     async () => {
-      // Dont try to fetch if document is inProgress
       if (!session || !repository || !documentId) {
         return
       }

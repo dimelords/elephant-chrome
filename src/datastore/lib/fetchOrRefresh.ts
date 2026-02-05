@@ -5,7 +5,7 @@ import { get } from '@/lib/index/get'
  * Either fetch all objects from specified object store (which is the
  * same thing as documentType - e.g core/author, core/section). If
  * necessary (or when forced) refresh the object store with data from
- * the index before returnin the objects.
+ * the index before returning the objects.
  */
 export async function fetchOrRefresh<TObject, TIndexItem>(
   IDB: IndexedDBContextInterface,
@@ -13,7 +13,8 @@ export async function fetchOrRefresh<TObject, TIndexItem>(
   indexUrl: URL,
   accessToken: string,
   force: boolean,
-  transformer: (item: TIndexItem) => TObject
+  transformer: (item: TIndexItem) => TObject,
+  language?: string
 ): Promise<TObject[]> {
   const { lastRefresh } = await IDB.get<{ lastRefresh: Date }>('__meta', storeName) || {}
   const maxRefreshInterval = 1000 * 3600 * 48
@@ -25,7 +26,7 @@ export async function fetchOrRefresh<TObject, TIndexItem>(
           return
         }
 
-        const items = await fetchFromIndex(indexUrl, accessToken, storeName, transformer)
+        const items = await fetchFromIndex(indexUrl, accessToken, storeName, transformer, language)
         if (!Array.isArray(items)) {
           return []
         }
@@ -59,10 +60,11 @@ async function fetchFromIndex<TObject, TIndexItem>(
   indexUrl: URL,
   accessToken: string,
   documentType: string,
-  transformer: (item: TIndexItem) => TObject
+  transformer: (item: TIndexItem) => TObject,
+  language?: string
 ): Promise<TObject[] | undefined> {
   let page = 1
-  const size = 500
+  const size = 200
   const objs: TObject[] = []
 
   try {
@@ -73,26 +75,28 @@ async function fetchFromIndex<TObject, TIndexItem>(
         documentType,
         {
           page,
-          size
+          size,
+          language
         }
       )
-
-      if (!Array.isArray(result.hits)) {
+      if (!result.ok) {
+        console.warn(`[fetchFromIndex] Search not ok:`, result.ok)
         break
       }
-
-      result.hits.forEach((hit) => {
+      const hitsArray = Array.isArray(result.hits) ? result.hits : (result.hits?.hits ?? [])
+      hitsArray.forEach((hit: TIndexItem) => {
         objs.push(transformer(hit))
       })
 
-      if (result.hits.length < size) {
+      if (hitsArray.length < size) {
+        console.log(`[fetchFromIndex] Last page reached (${hitsArray.length} < ${size})`)
         break
       }
 
       page++
     }
   } catch (ex) {
-    console.warn(ex)
+    console.error(`[fetchFromIndex] Error:`, ex)
     return
   }
 

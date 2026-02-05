@@ -30,7 +30,6 @@ export async function initializeAuthor({ url, session, repository }: {
   try {
     const client = new Index(url.href)
     const envRole = url.href.includes('.stage.') ? 'stage' : 'prod'
-
     const authorDoc = await client.query<Author, AuthorFields>({
       accessToken: session.accessToken,
       documentType: 'core/author',
@@ -69,6 +68,7 @@ export async function initializeAuthor({ url, session, repository }: {
       throw new Error(`Failed to fetch author document: ${authorDoc.errorMessage}`)
     }
 
+    console.log('authordoc:', authorDoc)
     const isValid = verifyAuthorDoc(authorDoc, envRole, session)
     if (isValid) {
       console.info('Author document exist and is valid')
@@ -131,6 +131,8 @@ function appendSub(document: Document, session: Session, role: 'stage' | 'prod')
   if (!session.user?.sub) {
     throw new Error('No sub in session')
   }
+
+  console.log(session.user.sub)
 
   if (!Array.isArray(document.links)) {
     document.links = []

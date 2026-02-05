@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useIndexedDB } from '../hooks/useIndexedDB'
 import { fetchOrRefresh } from '../lib/fetchOrRefresh'
 import { type IDBStory } from '../types'
-import { type IndexedStory } from '@/lib/index'
+import { type IndexHit } from '@/lib/index/schemas/common'
 
 interface CoreStoryProviderState {
   objects: IDBStory[]
@@ -31,24 +31,24 @@ export const CoreStoryProvider = ({ children }: {
       return
     }
 
-    const cachedObjects = await fetchOrRefresh<IDBStory, IndexedStory>(
+    const cachedObjects = await fetchOrRefresh<IDBStory, IndexHit>(
       IDB,
       documentType,
       indexUrl,
       data.accessToken,
       force,
       (item) => {
-        const { _id: id, _source: _ } = item
+        const { id, source } = item
         const getRoleText = (roleIndex: number): [string, string] => ([
-          _['document.meta.core_definition.role']?.[roleIndex]?.trim() || '',
-          _['document.meta.core_definition.data.text']?.[roleIndex]?.trim() || ''
+          source?.['document.meta.core_definition.role']?.values?.[roleIndex]?.trim() || '',
+          source?.['document.meta.core_definition.data.text']?.values?.[roleIndex]?.trim() || ''
         ])
         const [role0, text0] = getRoleText(0)
         const [role1, text1] = getRoleText(1)
 
         const story = {
           id,
-          title: _['document.title'][0].trim(),
+          title: source?.['document.title']?.values?.[0]?.trim() || '',
           shortText: '',
           longText: ''
         }

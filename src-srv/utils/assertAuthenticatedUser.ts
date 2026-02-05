@@ -51,7 +51,11 @@ function getUnprotectedRoutes(baseUrl: string): string[] {
   const unprotectedRoutes = [
     `${baseUrl}/auth/`,
     `${baseUrl}/init`,
-    `${baseUrl}/assets`
+    `${baseUrl}/assets`,
+    `${baseUrl}/api/capabilities`,
+    `${baseUrl}/api/tt-images`,
+    `${baseUrl}/api/graphics`,
+    `${baseUrl}/api/images-proxy`
   ]
 
   if (process.env.NODE_ENV === 'development') {

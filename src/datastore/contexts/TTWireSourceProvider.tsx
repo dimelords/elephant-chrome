@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useIndexedDB } from '../hooks/useIndexedDB'
 import { fetchOrRefresh } from '../lib/fetchOrRefresh'
 import { type IDBWireSource } from '../types'
-import { type IndexedWireSource } from '@/lib/index'
+import { type IndexHit } from '@/lib/index/schemas/common'
 
 interface TTWireSourceProviderState {
   objects: IDBWireSource[]
@@ -31,18 +31,18 @@ export const TTWireSourceProvider = ({ children }: {
       return
     }
 
-    const cachedObjects = await fetchOrRefresh<IDBWireSource, IndexedWireSource>(
+    const cachedObjects = await fetchOrRefresh<IDBWireSource, IndexHit>(
       IDB,
       documentType,
       indexUrl,
       data.accessToken,
       force,
       (item) => {
-        const { _id: id, _source: _ } = item
+        const { id, source } = item
         return {
           id,
-          uri: _['document.uri'][0].trim(),
-          title: _['document.title'][0].trim()
+          uri: source?.['document.uri']?.values?.[0]?.trim() || '',
+          title: source?.['document.title']?.values?.[0]?.trim() || ''
         }
       }
     )

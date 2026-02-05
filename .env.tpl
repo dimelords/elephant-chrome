@@ -25,9 +25,14 @@ INDEX_URL="https://...se:443"
 # Websocket
 WS_URL=https:// ...
 
-# Image resource
-CONTENT_API_URL=https:// ...
+# Image resource (TT News API)
+CONTENT_API_URL=https://api.tt.se
 IMAGE_BASE_URL=https:// ...
+
+# TT API credentials (optional - only needed if using TT News image service)
+# Get these from TT Nyhetsbyrån: https://tt.se
+TT_API_KEY=your-api-key-here
+TT_AGREEMENT_ID=your-agreement-id
 
 # Spelling backend
 SPELLCHECK_URL=https:// ...

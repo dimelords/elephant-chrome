@@ -11,6 +11,116 @@ export const consume = async (
     throw new Error('Image plugin expected File for consumation, not a list/array')
   }
 
+  // Handle image drops from ImageSearch (tt/visual)
+  if (input.type === 'tt/visual' && typeof input.data === 'string') {
+    try {
+      const imageData = JSON.parse(input.data)
+      const session = await getCachedSession()
+
+      if (!session) {
+        throw new Error('No session found, user must be logged in to use images')
+      }
+
+      // Download the image from the proxy URL and upload to repository
+      const imageUrl = imageData.proxy || imageData.href
+
+      // Fetch the image (no auth needed - proxy is unprotected)
+      const response = await fetch(imageUrl)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.statusText}`)
+      }
+
+      const blob = await response.blob()
+      const fileName = `tt-image-${Date.now()}.jpg`
+      const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' })
+
+      // Upload to repository
+      const { uuid } = await repository.uploadFile(
+        fileName,
+        file.type,
+        file,
+        session.accessToken
+      )
+
+      return {
+        ...input,
+        type: 'core/image',
+        data: {
+          type: 'core/image',
+          id: uuid,
+          class: 'block',
+          properties: {
+            title: imageData.text || 'Image',
+            rel: 'image',
+            uploadId: uuid,
+            uri: `core://image/${uuid}`,
+            width: imageData.width || 800,
+            height: imageData.height || 600
+          },
+          children: [
+            {
+              type: 'core/image/image',
+              class: 'void',
+              children: [{ text: '' }]
+            },
+            {
+              type: 'core/image/text',
+              class: 'text',
+              children: [{ text: imageData.text || '' }]
+            },
+            {
+              type: 'core/image/byline',
+              class: 'text',
+              children: [{ text: imageData.byline || '' }]
+            }
+          ]
+        }
+      }
+    } catch (error) {
+      console.error('Failed to process tt/visual data:', error)
+      toast.error('Kunde inte ladda upp bilden')
+      return undefined
+    }
+  }
+
+  // Handle generic URL drops (text/uri-list)
+  if (input.type === 'text/uri-list' && typeof input.data === 'string') {
+    return {
+      ...input,
+      type: 'core/image',
+      data: {
+        type: 'core/image',
+        id: input.data,
+        class: 'block',
+        properties: {
+          title: 'Image',
+          rel: 'image',
+          uri: input.data,
+          width: 800,
+          height: 600
+        },
+        children: [
+          {
+            type: 'core/image/image',
+            class: 'void',
+            children: [{ text: '' }]
+          },
+          {
+            type: 'core/image/text',
+            class: 'text',
+            children: [{ text: '' }]
+          },
+          {
+            type: 'core/image/byline',
+            class: 'text',
+            children: [{ text: '' }]
+          }
+        ]
+      }
+    }
+  }
+
+  // Handle file uploads (drag from computer)
   if (!(input.data instanceof File)) {
     throw new Error('Image plugin expected File for consumation, wrong indata')
   }

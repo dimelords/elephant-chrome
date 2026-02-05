@@ -1,4 +1,4 @@
-import { transformText, revertText, transformUnorderedList } from './core/index.js'
+import { transformText, revertText, transformUnorderedList, revertUnorderedList } from './core/index.js'
 import { transformVisual, revertVisual } from './tt/visual.js'
 import type { Block } from '@ttab/elephant-api/newsdoc'
 import { revertFactbox, transformFactbox } from './core/factbox.js'
@@ -27,6 +27,7 @@ export function newsDocToSlate(content: Block[]): TBElement[] {
         case 'core/factbox':
           return transformFactbox(element)
         case 'core/unordered-list':
+        case 'core/ordered-list':
           return transformUnorderedList(element)
         case 'core/table':
           return transformTable(element)
@@ -62,6 +63,9 @@ export function slateToNewsDoc(elements: TBElement[]): Block[] | undefined {
         return revertImage(element)
       case 'core/factbox':
         return revertFactbox(element)
+      case 'core/unordered-list':
+      case 'core/ordered-list':
+        return revertUnorderedList(element)
       case 'core/table':
         return revertTable(element)
       case 'tt/tv-listing':

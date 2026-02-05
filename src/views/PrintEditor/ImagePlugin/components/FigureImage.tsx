@@ -24,11 +24,12 @@ export const FigureImage = ({ editor, children, rootNode, options }: TBComponent
   const focus = parseFocusString(focusStr)
 
   const { repository: repository } = options
-  const { uploadId }: { uploadId?: string } = properties
+  const { uploadId, uri }: { uploadId?: string, uri?: string } = properties
   const imgContainerRef = useRef<HTMLDivElement>(null)
   const [attachmentDetails, setAttachmentDetails] = useState<AttachmentDetails | null>(null)
   const { data: session } = useSession()
 
+  // Fetch attachment details for uploaded images
   useEffect(() => {
     if (!repository || !session || !uploadId) {
       return
@@ -47,12 +48,23 @@ export const FigureImage = ({ editor, children, rootNode, options }: TBComponent
       })
   }, [session, repository, uploadId])
 
+  // Determine image source: uploaded file or direct URI
+  // Only use URI if it's a valid HTTP(S) URL, not core:// scheme
+  const isValidHttpUrl = uri?.startsWith('http://') || uri?.startsWith('https://')
+  const imageSrc = attachmentDetails?.downloadLink || (isValidHttpUrl ? uri : undefined)
+
   return (
     <div contentEditable={false}>
       <div ref={imgContainerRef} className='relative rounded-xs overflow-hidden'>
-        <img width='100%' src={attachmentDetails?.downloadLink} />
+        {imageSrc ? (
+          <img width='100%' src={imageSrc} alt={properties?.title as string || 'Image'} />
+        ) : (
+          <div className='w-full h-48 bg-gray-200 flex items-center justify-center'>
+            <span className='text-gray-500'>Loading image...</span>
+          </div>
+        )}
 
-        {!!attachmentDetails?.downloadLink
+        {!!imageSrc
           && (
             <>
               {/* Overlay with cutout for crop area */}
@@ -62,7 +74,7 @@ export const FigureImage = ({ editor, children, rootNode, options }: TBComponent
               {focus && <Crop.VisualFocus focus={focus} />}
 
               <Crop.Dialog
-                src={attachmentDetails?.downloadLink}
+                src={imageSrc}
                 area={crop}
                 point={focus}
                 onChange={({ crop, focus }) => {

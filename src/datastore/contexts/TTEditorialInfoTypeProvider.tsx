@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useIndexedDB } from '../hooks/useIndexedDB'
 import { fetchOrRefresh } from '../lib/fetchOrRefresh'
 import { type IDBEditorialInfoType } from '../types'
-import { type IndexedEditorialInfoType } from '@/lib/index'
+import { type IndexHit } from '@/lib/index/schemas/common'
 
 interface TTEditorialInfoTypeProviderState {
   objects: IDBEditorialInfoType[]
@@ -31,17 +31,17 @@ export const TTEditorialInfoTypeProvider = ({ children }: {
       return
     }
 
-    const cachedObjects = await fetchOrRefresh<IDBEditorialInfoType, IndexedEditorialInfoType>(
+    const cachedObjects = await fetchOrRefresh<IDBEditorialInfoType, IndexHit>(
       IDB,
       documentType,
       indexUrl,
       data.accessToken,
       force,
       (item) => {
-        const { _id: id, _source: _ } = item
+        const { id, source } = item
         return {
           id,
-          title: _['document.title'][0].trim()
+          title: source?.['document.title']?.values?.[0]?.trim() || ''
         }
       }
     )

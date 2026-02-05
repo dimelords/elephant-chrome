@@ -216,10 +216,17 @@ export class CollaborationClient {
       }
     })
 
+    // Attach to register this provider with the shared WebSocket
     this.#hp.attach()
 
-    if (this.#hpWebsocketProvider.webSocket?.readyState === WebSocket.OPEN) {
+    // Check WebSocket state for debugging
+    const wsState = this.#hpWebsocketProvider.webSocket?.readyState
+    if (wsState === WebSocket.OPEN) {
       console.log('🔌 Using existing open WebSocket connection')
+    } else if (wsState === WebSocket.CONNECTING) {
+      console.log('⏳ WebSocket is connecting...')
+    } else {
+      console.log('❌ WebSocket is not ready:', wsState)
     }
   }
 

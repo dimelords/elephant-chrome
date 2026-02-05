@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useIndexedDB } from '../hooks/useIndexedDB'
 import { fetchOrRefresh } from '../lib/fetchOrRefresh'
 import { type IDBOrganiser } from '../types'
-import { type IndexedOrganiser } from '@/lib/index'
+import { type IndexHit } from '@/lib/index/schemas/common'
 
 interface CoreOrganiserProviderState {
   objects: IDBOrganiser[]
@@ -31,22 +31,22 @@ export const CoreOrganiserProvider = ({ children }: {
       return
     }
 
-    const cachedObjects = await fetchOrRefresh<IDBOrganiser, IndexedOrganiser>(
+    const cachedObjects = await fetchOrRefresh<IDBOrganiser, IndexHit>(
       IDB,
       documentType,
       indexUrl,
       data.accessToken,
       force,
       (item) => {
-        const { _id: id, _source: _ } = item
+        const { id, source } = item
         return {
           id,
-          title: _['document.title']?.[0].trim() || '',
-          city: _['document.meta.core_contact_info.data.city']?.[0].trim() || '',
-          country: _['document.meta.core_contact_info.data.country']?.[0].trim() || '',
-          email: _['document.meta.core_contact_info.data.email']?.[0]?.trim() || '',
-          phone: _['document.meta.core_contact_info.data.phone']?.[0]?.trim() || '',
-          streetAddress: _['document.meta.core_contact_info.data.streetAddress']?.[0].trim() || ''
+          title: source?.['document.title']?.values?.[0]?.trim() || '',
+          city: source?.['document.meta.core_contact_info.data.city']?.values?.[0]?.trim() || '',
+          country: source?.['document.meta.core_contact_info.data.country']?.values?.[0]?.trim() || '',
+          email: source?.['document.meta.core_contact_info.data.email']?.values?.[0]?.trim() || '',
+          phone: source?.['document.meta.core_contact_info.data.phone']?.values?.[0]?.trim() || '',
+          streetAddress: source?.['document.meta.core_contact_info.data.streetAddress']?.values?.[0]?.trim() || ''
         }
       }
     )

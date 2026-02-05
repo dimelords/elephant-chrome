@@ -26,6 +26,7 @@ interface IndexSearchOptions<F> {
   loadDocument?: boolean
   options?: useDocumentsFetchOptions
   subscribe?: boolean
+  shared?: boolean
 }
 
 export interface IndexSearchResult<T extends HitV1> {
@@ -66,7 +67,8 @@ export class Index {
     loadDocument = false,
     loadSource: source = false,
     language = '',
-    options
+    options,
+    shared = true
   }: IndexSearchOptions<F>): Promise<IndexSearchResult<T>> {
     const { pageSize } = pagination({ page, size })
 
@@ -93,7 +95,7 @@ export class Index {
               }
             }),
             source,
-            shared: true,
+            shared,
             searchAfter: [],
             loadDocument: loadDocument || options?.asAssignments,
             subscribe: currentPage === 1 ? options?.subscribe : false

@@ -37,12 +37,12 @@ export class Spellchecker {
     const session = await getCachedSession()
 
     if (!session?.accessToken) {
-      console.warn('No access token, no spellchecking')
+      console.warn('Spellcheck: No access token available')
       return []
     }
 
     if (!documentLanguage) {
-      console.warn('No document language provided, no spellchecking')
+      console.warn('Spellcheck: No document language provided')
       return []
     }
 
@@ -64,10 +64,23 @@ export class Spellchecker {
     }
 
     try {
+      console.debug(`Spellcheck: Calling service for ${text.length} texts in ${language}`)
+
       const { response } = await this.#client.text({
         language,
-        text
+        text,
+        suggestions: true
       }, meta(session.accessToken))
+
+      console.debug(`Spellcheck: Got response:`, response)
+
+      // Check if we got a valid response
+      if (!response) {
+        console.warn(`Spellcheck: Empty response from server for language ${language}`)
+        return []
+      }
+
+      console.debug(`Spellcheck: Response.misspelled length:`, response.misspelled?.length)
 
       const resturnResult = !Array.isArray(response?.misspelled)
         ? []
@@ -82,10 +95,32 @@ export class Spellchecker {
             })
         })
 
+      console.debug(`Spellcheck: Returning ${resturnResult.length} results`)
       return resturnResult
     } catch (err: unknown) {
       // Suppress error so we don't interrupt the system just because we can't check spelling
-      console.error(`Unable to check spelling: ${(err as Error)?.message || 'Unknown error'}`)
+      let errorDetails = 'Unknown error'
+
+      if (err instanceof Error) {
+        errorDetails = err.message || err.name || 'Error object without message'
+        console.error('Spellcheck error details:', {
+          name: err.name,
+          message: err.message,
+          stack: err.stack
+        })
+      } else if (typeof err === 'object' && err !== null) {
+        try {
+          errorDetails = JSON.stringify(err)
+          console.error('Spellcheck error object:', err)
+        } catch {
+          errorDetails = String(err)
+        }
+      } else {
+        errorDetails = String(err)
+        console.error('Spellcheck error (not an object):', err)
+      }
+
+      console.error(`Unable to check spelling (lang: ${language}, texts: ${text.length}): ${errorDetails}`)
     }
 
     return []

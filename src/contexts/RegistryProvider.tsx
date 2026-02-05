@@ -32,8 +32,8 @@ export interface RegistryProviderState {
     contentApiUrl: URL
     spellcheckUrl: URL
     userUrl: URL
-    faroUrl: URL
-    baboonUrl: URL
+    faroUrl?: URL
+    baboonUrl?: URL
   }
   repository?: Repository
   workflow?: Workflow
@@ -59,9 +59,7 @@ export const initialState: RegistryProviderState = {
     repositoryUrl: new URL('http://localhost'),
     contentApiUrl: new URL('http://localhost'),
     spellcheckUrl: new URL('http://localhost'),
-    userUrl: new URL('http://localhost'),
-    faroUrl: new URL('http://localhost'),
-    baboonUrl: new URL('http://localhost')
+    userUrl: new URL('http://localhost')
   },
   dispatch: () => { }
 }
@@ -87,7 +85,7 @@ export const RegistryProvider = ({ children }: PropsWithChildren): JSX.Element =
         const index = new Index(server.indexUrl.href)
         const spellchecker = new Spellchecker(server.spellcheckUrl.href)
         const user = new User(server.userUrl.href)
-        const baboon = new Baboon(server.baboonUrl.href)
+        const baboon = server.baboonUrl ? new Baboon(server.baboonUrl.href) : undefined
 
         dispatch({
           server,
@@ -97,7 +95,7 @@ export const RegistryProvider = ({ children }: PropsWithChildren): JSX.Element =
           index,
           spellchecker,
           user,
-          baboon
+          ...(baboon && { baboon })
         })
         setIsInitialized(true)
       } catch (ex) {

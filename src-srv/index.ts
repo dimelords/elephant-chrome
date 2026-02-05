@@ -131,7 +131,11 @@ export async function runServer(): Promise<string> {
     quiet: process.env.LOG_LEVEL !== 'info' && process.env.LOG_LEVEL !== 'debug'
   })
 
-  await collaborationServer.listen([`${BASE_URL}/:document`]).catch((ex) => {
+  // Listen on both base path (for shared WebSocket) and document-specific path
+  await collaborationServer.listen([
+    `${BASE_URL}/:document`,  // Legacy: per-document WebSocket
+    `${BASE_URL}`             // Shared WebSocket for all documents
+  ]).catch((ex) => {
     throw new Error(`start collaboration server on port ${PORT}`, { cause: ex })
   })
 
