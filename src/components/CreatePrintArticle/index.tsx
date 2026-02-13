@@ -109,33 +109,35 @@ export const CreatePrintArticle = ({ id, asDialog, onDialogClose, className }: V
       </ViewHeader.Root>
 
       <View.Content>
-        {data?.length
-          ? (
-              <Form.Root asDialog={asDialog}>
-                <Form.Content>
-                  <Form.Group icon={TagIcon}>
-                    <Select
-                      value={selectedPrintFlow?.value || ''}
-                      onValueChange={(option) => {
-                        setPrintFlow(option)
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Välj printflöde'>{selectedPrintFlow?.label}</SelectValue>
-                      </SelectTrigger>
-                      <SelectContent
-                        style={{
-                          width: 'var(--radix-select-trigger-width)',
-                          maxHeight: 'var(--radix-select-content-available-height)' }}
+        {!data && !error
+          ? <LoadingText>Laddar printflöden..</LoadingText>
+          : data?.length
+            ? (
+                <Form.Root asDialog={asDialog}>
+                  <Form.Content>
+                    <Form.Group icon={TagIcon}>
+                      <Select
+                        value={selectedPrintFlow?.value || ''}
+                        onValueChange={(option) => {
+                          setPrintFlow(option)
+                        }}
                       >
-                        {allPrintFlows.map((flow) => (
-                          <SelectItem value={flow.value} key={flow.value}>
-                            {flow.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Form.Group>
+                        <SelectTrigger>
+                          <SelectValue placeholder='Välj printflöde'>{selectedPrintFlow?.label}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent
+                          style={{
+                            width: 'var(--radix-select-trigger-width)',
+                            maxHeight: 'var(--radix-select-content-available-height)' }}
+                        >
+                          {allPrintFlows.map((flow) => (
+                            <SelectItem value={flow.value} key={flow.value}>
+                              {flow.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Form.Group>
                   <Form.Group icon={TagIcon}>
                     <Select
                       disabled={!printFlow}
@@ -197,8 +199,16 @@ export const CreatePrintArticle = ({ id, asDialog, onDialogClose, className }: V
                   </Form.Submit>
                 </Form.Footer>
               </Form.Root>
-            )
-          : <LoadingText>Laddar printflöden..</LoadingText>}
+              )
+            : (
+                <div className='flex flex-col items-center justify-center h-full p-8 text-center'>
+                  <LibraryIcon className='w-12 h-12 mb-4 text-gray-400' />
+                  <h3 className='text-lg font-semibold mb-2'>Inga printflöden hittades</h3>
+                  <p className='text-sm text-gray-600'>
+                    Det finns inga printflöden i systemet. Skapa ett printflöde först för att kunna skapa printartiklar.
+                  </p>
+                </div>
+              )}
       </View.Content>
     </View.Root>
   )

@@ -1,0 +1,5 @@
+# NPM configuration for Dimelords packages
+# Copy this file to .npmrc before running npm install
+# cp .npmrc.template .npmrc
+
+@dimelords:registry=https://npm.pkg.github.com/

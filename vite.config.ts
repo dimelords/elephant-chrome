@@ -61,6 +61,14 @@ export default defineConfig(({ mode }) => {
       },
       watch: {
         awaitWriteFinish: true
+      },
+      fs: {
+        allow: [
+          // Allow serving files from project root
+          '.',
+          // Allow serving files from elephant-ui
+          path.resolve(__dirname, '../elephant-ui')
+        ]
       }
     },
     preview: {
