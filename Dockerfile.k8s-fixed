@@ -1,0 +1,27 @@
+FROM node:24.13.0-slim
+WORKDIR /app
+
+# Build arg for GitHub token
+ARG GITHUB_TOKEN
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Configure npm for GitHub packages and install dependencies
+RUN echo "@dimelords:registry=https://npm.pkg.github.com/" > .npmrc && \
+    echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc && \
+    npm ci --omit=dev && \
+    rm -f .npmrc
+
+# Copy built application
+COPY dist ./dist
+
+EXPOSE 5183
+
+# Environment variables for server
+ENV NODE_ENV=production
+ENV PORT=5183
+ENV HOST=0.0.0.0
+
+# Run the server directly
+CMD ["node", "dist/src-srv/index.js"]

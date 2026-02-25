@@ -1,0 +1,27 @@
+FROM node:24.13.0-slim AS build
+
+WORKDIR /usr/src/app
+
+# Copy everything (local @ttab deps must exist)
+COPY . .
+
+# Remove the problematic @ttab/eslint-config-elephant from package.json
+RUN sed -i '/"@ttab\/eslint-config-elephant"/d' package.json
+
+# Install ALL dependencies (needed for build)
+RUN npm install
+
+# Build application
+RUN npm run build
+
+# Clean up - remove devDependencies after build
+RUN npm prune --production
+
+FROM node:24.13.0-slim
+
+WORKDIR /usr/src/app
+
+COPY --from=build /usr/src/app /usr/src/app
+
+EXPOSE 5183
+CMD ["npm", "start"]
