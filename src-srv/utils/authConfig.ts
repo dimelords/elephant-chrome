@@ -55,7 +55,8 @@ export async function createAuthInfo(
   logger: pino.Logger,
   providerUrl: string,
   clientID: string, clientSecret: string,
-  idpHint?: string
+  idpHint?: string,
+  publicUrl?: string
 ): Promise<AuthInfo> {
   const oidcConf = await fetchOidcConfig(providerUrl).catch((e) => {
     throw new Error('fetch OIDC configuration', { cause: e })
@@ -72,6 +73,9 @@ export async function createAuthInfo(
   const auth = {
     providers: [
       Keycloak({
+        clientId: clientID,
+        clientSecret: clientSecret,
+        issuer: providerUrl,
         authorization: authorizationUrl.toString()
       })
     ],
@@ -111,8 +115,10 @@ export async function createAuthInfo(
       }
     },
     pages: {
-      signIn: `${process.env.BASE_URL}/login`
-    }
+      signIn: `${process.env.BASE_URL || ''}/login`
+    },
+    basePath: `${process.env.BASE_URL || ''}/api/auth`,
+    trustHost: true
   } as AuthConfig
 
   return {
