@@ -53,7 +53,13 @@ export class CollaborationServer {
     this.#expressServer = configuration.expressServer
     this.#repository = configuration.repository
     this.#errorHandler = new CollaborationServerErrorHandler(configuration.user)
-    this.#openDocuments = new OpenDocuments({ redis: configuration.redis })
+    
+    // Create a separate Redis connection for OpenDocuments to avoid subscriber mode conflicts
+    const openDocumentsRedis = configuration.redis.duplicate()
+    // Connect the duplicate Redis instance - this is done synchronously in the constructor
+    // The actual connection will be established when needed
+    this.#openDocuments = new OpenDocuments({ redis: openDocumentsRedis })
+    
     this.#repositoryExtension = new RepositoryExtension({
       repository: this.#repository,
       errorHandler: this.#errorHandler,

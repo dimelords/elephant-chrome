@@ -64,4 +64,23 @@ export class Redis {
   get prefix(): string {
     return BASE_PREFIX
   }
+
+  /**
+   * Create a duplicate Redis connection.
+   * This is useful when you need separate connections for pub/sub vs regular commands.
+   * The PubsubExtension puts the connection in subscriber mode, which prevents other commands.
+   */
+  duplicate(): Redis {
+    const duplicateRedis = new Redis(this.#url)
+    // Note: The duplicate connection needs to be connected separately
+    // This is done automatically when passed to extensions that need it
+    return duplicateRedis
+  }
+
+  /**
+   * Get the underlying Redis client for direct access
+   */
+  getClient(): RedisClientType | undefined {
+    return this.#redisClient
+  }
 }
