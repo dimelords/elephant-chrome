@@ -1,6 +1,6 @@
 import { SearchInput } from '@/components/SearchInput'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@ttab/elephant-ui'
-import React, { useState, useRef, type Dispatch, type SetStateAction, type JSX } from 'react'
+import React, { useState, type Dispatch, type SetStateAction, type JSX } from 'react'
 import type { MediaTypes } from '..'
 
 export const ImageSearchInput = ({ setQueryString, setMediaType, showMediaTypeToggle = false }: {
@@ -9,8 +9,6 @@ export const ImageSearchInput = ({ setQueryString, setMediaType, showMediaTypeTo
   showMediaTypeToggle?: boolean
 }): JSX.Element => {
   const [query, setQuery] = useState('')
-
-  const inputRef = useRef<HTMLInputElement>(null)
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault()
@@ -27,7 +25,6 @@ export const ImageSearchInput = ({ setQueryString, setMediaType, showMediaTypeTo
         type='text'
         placeholder='Sök'
         name='imagesearch'
-        ref={inputRef}
         onChange={(e) => setQuery(e.currentTarget.value)}
       />
       {showMediaTypeToggle && (

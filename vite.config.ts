@@ -1,4 +1,5 @@
 /// <reference types="vitest" />
+import fs from 'fs'
 import path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, loadEnv } from 'vite'
@@ -64,9 +65,7 @@ export default defineConfig(({ mode }) => {
       },
       fs: {
         allow: [
-          // Allow serving files from project root
           '.',
-          // Allow serving files from elephant-ui
           path.resolve(__dirname, '../elephant-ui')
         ]
       }
@@ -97,6 +96,7 @@ export default defineConfig(({ mode }) => {
       }
     },
     build: {
+      sourcemap: true,
       chunkSizeWarningLimit: 1500,
       rollupOptions: {
         output: {

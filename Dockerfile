@@ -1,4 +1,4 @@
-FROM node:24.13.0-slim AS build
+FROM node:24.14.0-slim AS build
 
 ARG npm_authtoken
 
@@ -27,7 +27,7 @@ RUN npm run build
 RUN npm prune --omit=dev && rm -f .npmrc
 
 
-FROM node:24.13.0-slim
+FROM node:24.14.0-slim
 
 WORKDIR /usr/src/app
 
