@@ -23,11 +23,12 @@ import { GenAISuggestions } from '@/components/GenAISuggestions'
 import { GenAILoading } from '@/components/GenAILoading'
 
 import { getValueByYPath } from '@/shared/yUtils'
-import { contentMenuLabels } from '@/defaults/contentMenuLabels'
+import { getContentMenuLabels } from '@/defaults/contentMenuLabels'
 import type { YDocument } from '@/modules/yjs/hooks'
 import { useYDocument } from '@/modules/yjs/hooks'
 import type * as Y from 'yjs'
 import { useSession } from 'next-auth/react'
+import { useTranslation } from 'react-i18next'
 
 // Metadata definition
 const meta: ViewMetadata = {
@@ -49,6 +50,7 @@ const meta: ViewMetadata = {
 // Main Editor Component - Handles document initialization
 const Editor = (props: ViewProps): JSX.Element => {
   const [query] = useQuery()
+  const { t } = useTranslation('common')
   const documentId = props.id || query.id as string
   const preview = query.preview === 'true'
 
@@ -58,8 +60,8 @@ const Editor = (props: ViewProps): JSX.Element => {
   if (!documentId || typeof documentId !== 'string') {
     return (
       <Error
-        title='Artikeldokument saknas'
-        message='Inget artikeldokument är angivet. Navigera tillbaka till översikten och försök igen.'
+        title={t('errors:messages.articleMissingTitle')}
+        message={t('errors:messages.articleMissingDescription')}
       />
     )
   }
@@ -99,8 +101,10 @@ function EditorWrapper(props: ViewProps & {
   planningId?: string | null
   preview?: boolean
 }): JSX.Element {
+  const { preview, planningId } = props
+
   const ydoc = useYDocument<Y.Map<unknown>>(props.documentId, {
-    visibility: !props.preview
+    visibility: !preview
   })
   const [documentLanguage] = getValueByYPath<string>(ydoc.ele, 'root.language')
   const [content] = getValueByYPath<Y.XmlText>(ydoc.ele, 'content', true)
@@ -109,6 +113,9 @@ function EditorWrapper(props: ViewProps & {
   const openFactboxEditor = useLink('Factbox')
   const openImageSearch = useLink('ImageSearch')
   const openFactboxes = useLink('Factboxes')
+  const { t, i18n } = useTranslation()
+  const activeLocale = i18n.resolvedLanguage
+
   const [genaiSuggestions, setGenaiSuggestions] = useState<Array<{
     id: string
     type: string
@@ -120,15 +127,10 @@ function EditorWrapper(props: ViewProps & {
   const [genaiApplyFn, setGenaiApplyFn] = useState<((improvement: string) => void) | null>(null)
   const [genaiLoading, setGenaiLoading] = useState<boolean>(false)
 
-  // Handle applying a suggestion
   const handleApplySuggestion = (suggestion: typeof genaiSuggestions[0]) => {
     if (genaiApplyFn) {
-      // Use the apply function from the plugin to replace text
       genaiApplyFn(suggestion.improvement)
-      // Close suggestions panel after applying
       handleDismissSuggestions()
-    } else {
-      console.error('GenAI: No apply function available')
     }
   }
 
@@ -154,24 +156,30 @@ function EditorWrapper(props: ViewProps & {
         accessToken: data?.accessToken || ''
       }),
       TTVisual({
-        enableCrop: false
+        captionLabel: t('editor:image.captionLabel'),
+        bylineLabel: t('editor:image.bylineLabel'),
+        enableCrop: false,
+        removable: !preview
       }),
       Text({
         countCharacters: ['heading-1'],
-        ...contentMenuLabels
+        ...getContentMenuLabels()
       }),
       Factbox({
+        headerTitle: t('editor:factbox.headerTitle'),
+        modifiedLabel: t('editor:factbox.modifiedLabel'),
+        footerTitle: t('editor:factbox.footerTitle'),
         onEditOriginal: (id: string) => {
           openFactboxEditor(undefined, { id })
         },
-        removable: true
+        removable: !preview,
+        locale: activeLocale
       }),
       GenAIPlugin({
         genaiUrl: import.meta.env.VITE_GENAI_URL || 'http://localhost:1480',
         getAccessToken: async () => data?.accessToken || '',
         language: documentLanguage?.toLowerCase(),
         onRequestStart: () => {
-          console.log('GenAI: Sending language:', documentLanguage?.toLowerCase())
           setGenaiLoading(true)
         },
         onRequestEnd: () => {
@@ -182,15 +190,13 @@ function EditorWrapper(props: ViewProps & {
           selectedText: string,
           applyFn: (improvement: string) => void
         ) => {
-          console.log('GenAI suggestions received:', suggestions)
           setGenaiSuggestions(suggestions)
           setGenaiSelectedText(selectedText)
-          // Store the apply function in state
           setGenaiApplyFn(() => applyFn)
         }
       })
     ]
-  }, [openFactboxEditor, openFactboxes, openImageSearch, data, repository, documentLanguage])
+  }, [openFactboxEditor, openFactboxes, openImageSearch, t, activeLocale, preview, data, repository, documentLanguage])
 
   if (!content) {
     return <View.Root />
@@ -201,11 +207,11 @@ function EditorWrapper(props: ViewProps & {
       <BaseEditor.Root
         ydoc={ydoc}
         content={content}
-        readOnly={props.preview}
+        readOnly={preview}
         plugins={configuredPlugins}
         lang={documentLanguage}
       >
-        <EditorHeader ydoc={ydoc} planningId={props.planningId} readOnly={props.preview} />
+        <EditorHeader ydoc={ydoc} planningId={planningId} readOnly={preview} />
 
         <Notes ydoc={ydoc} />
 

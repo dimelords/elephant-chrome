@@ -37,7 +37,7 @@ export interface SearchResult {
 export const createFetcher = (session: Session | null) =>
   async ([queryString, mediaType, page]: [queryString: string, mediaType: string, page: number]): Promise<SearchResult> => {
     if (!session) {
-      toast.error('Kan inte autentisera mot bildtjänsten')
+      toast.error(t('errors:toasts.unableToAutorise'))
       throw new Error('ImageSearch Error: No session for user')
     }
 

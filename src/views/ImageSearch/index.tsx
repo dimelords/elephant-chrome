@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react'
 import InfiniteScroll from './InfiniteScroll'
 import { ImageSearchInput } from './SearchInput'
 import { useCapabilities } from '@/hooks'
+import { useTranslation } from 'react-i18next'
 
 const BASE_URL = import.meta.env.BASE_URL || ''
 
@@ -126,6 +127,7 @@ const ImageSearchContent = (): JSX.Element => {
   const [mediaType, setMediaType] = useState<MediaTypes>('image')
   const { capabilities } = useCapabilities()
   const prevMediaTypeRef = useRef<MediaTypes>(mediaType)
+  const { t } = useTranslation('views')
 
   const swr = useSWRInfinite<SearchResult, Error>(
     (index) => {
@@ -156,7 +158,7 @@ const ImageSearchContent = (): JSX.Element => {
       <ViewHeader.Root>
         <ViewHeader.Title
           name='ImageSearch'
-          title='Bilder'
+          title={t('imageSearch.title')}
           icon={ImageIcon}
         />
         <ViewHeader.Content>
