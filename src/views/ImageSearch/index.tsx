@@ -1,100 +1,20 @@
-import React, { useState, useRef, useEffect, type JSX } from 'react'
+import React, { type Dispatch, type SetStateAction, useState, useMemo, type JSX } from 'react'
 import { View, ViewHeader } from '@/components'
 import { type ViewMetadata } from '@/types'
-import { LoaderIcon, ListEndIcon, ImageIcon } from '@ttab/elephant-ui/icons'
+import { LoaderIcon, ListEndIcon, ImageIcon, TriangleAlertIcon, RotateCcwIcon, SearchIcon } from '@ttab/elephant-ui/icons'
+import { Button } from '@ttab/elephant-ui'
 import useSWRInfinite from 'swr/infinite'
 import { SWRConfig } from 'swr'
-import { createFetcher, type NormalizedImage, type SearchResult } from './lib/fetcher'
+import { createTTFetcher } from './lib/ttFetcher'
+import { createNTBFetcher } from './lib/ntbFetcher'
+import { useRegistry } from '@/hooks/useRegistry'
 import { useSession } from 'next-auth/react'
+import type { ImageSearchResult as SearchResult } from './lib/types'
+import { Error } from '../Error'
+import { useTranslation } from 'react-i18next'
 import InfiniteScroll from './InfiniteScroll'
 import { ImageSearchInput } from './SearchInput'
-import { useCapabilities } from '@/hooks'
-import { useTranslation } from 'react-i18next'
-
-const BASE_URL = import.meta.env.BASE_URL || ''
-
-export type MediaTypes = 'image' | 'graphic'
-
-const ImageCard = ({ image }: { image: NormalizedImage }): JSX.Element => {
-  const imageRef = useRef<HTMLImageElement>(null)
-
-  const handleDragStart = (e: React.DragEvent) => {
-    e.stopPropagation()
-
-    if (!imageRef.current) return
-
-    const el = imageRef.current
-    el.style.opacity = '0.5'
-
-    // Clear any default drag data the browser might add
-    e.dataTransfer.clearData()
-
-    // For TT images, include full metadata for drag-and-drop
-    if (image.source === 'tt' && image._raw) {
-      const ttImage = image._raw
-      const imageData = {
-        byline: image.photographer || '',
-        text: image.description || '',
-        href: image.urls.preview,
-        proxy: image.urls.preview,
-        width: 1024,
-        height: 683
-      }
-      e.dataTransfer.setData('tt/visual', JSON.stringify(imageData))
-    } else {
-      // For other providers, set a generic image data format
-      e.dataTransfer.setData('text/uri-list', image.urls.full)
-      e.dataTransfer.setData('text/plain', image.title)
-    }
-  }
-
-  const handleDragEnd = () => {
-    if (imageRef.current) {
-      imageRef.current.style.opacity = '1'
-    }
-  }
-
-  return (
-    <div
-      className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer bg-white"
-    >
-      <div className="flex place-content-center bg-gray-200 dark:bg-table-focused min-h-[144px]">
-        <img
-          ref={imageRef}
-          src={image.urls.thumbnail}
-          alt={image.title}
-          title={image.description}
-          className="max-h-[176px] object-contain m-width-auto"
-          loading="lazy"
-          draggable
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        />
-      </div>
-      <div className="p-3">
-        <p className="text-sm font-medium truncate mb-1">
-          {image.title}
-        </p>
-        {image.photographer && (
-          <p className="text-xs text-gray-500 truncate">
-            {image.photographerUrl ? (
-              <a
-                href={image.photographerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline"
-              >
-                {image.photographer}
-              </a>
-            ) : (
-              image.photographer
-            )}
-          </p>
-        )}
-      </div>
-    </div>
-  )
-}
+import { Thumbnail } from './Thumbnail'
 
 const meta: ViewMetadata = {
   name: 'ImageSearch',
@@ -112,21 +32,60 @@ const meta: ViewMetadata = {
   }
 }
 
+const ImageSearchResult = ({ children }: {
+  total: number
+  children: React.ReactNode
+}): JSX.Element => {
+  return (
+    <div className='h-screen max-h-screen flex flex-col p-2 overflow-auto'>
+      <div className='relative grid grid-cols-2 @md/view:grid-cols-3 @2xl/view:grid-cols-4 @4xl/view:grid-cols-6 @6xl/view:grid-cols-8 gap-2'>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export const ImageSearch = (): JSX.Element => {
+  const { server: { imageSearchUrl }, envs: { imageSearchProvider }, ntb } = useRegistry()
   const { data: session } = useSession()
+  const [mediaType, setMediaType] = useState<MediaTypes>('image')
+
+  const fetcher = useMemo(() => {
+    if (ntb) {
+      return createNTBFetcher(ntb, session, 'ntb')
+    }
+
+    if (imageSearchProvider === 'tt') {
+      return createTTFetcher(imageSearchUrl, session, mediaType)
+    }
+  }, [ntb, session, imageSearchUrl, mediaType, imageSearchProvider])
+
+  if (!imageSearchProvider || !fetcher) {
+    return <Error title='Bildsökningsleverantör saknas' message='Ingen bildsökningsleverantör är konfigurerad' />
+  }
 
   return (
-    <SWRConfig value={{ fetcher: createFetcher(session) }}>
-      <ImageSearchContent />
+    <SWRConfig value={{ fetcher, shouldRetryOnError: false }}>
+      <ImageSearchContent
+        setMediaType={setMediaType}
+        mediaType={mediaType}
+        isNtb={!!ntb}
+      />
     </SWRConfig>
   )
 }
 
-const ImageSearchContent = (): JSX.Element => {
+const ImageSearchContent = ({
+  setMediaType,
+  mediaType,
+  isNtb
+}: {
+  setMediaType: Dispatch<SetStateAction<MediaTypes>>
+  mediaType: MediaTypes
+  isNtb: boolean
+}): JSX.Element => {
   const [queryString, setQueryString] = useState('')
-  const [mediaType, setMediaType] = useState<MediaTypes>('image')
-  const { capabilities } = useCapabilities()
-  const prevMediaTypeRef = useRef<MediaTypes>(mediaType)
+  const SIZE = 10
   const { t } = useTranslation('views')
 
   const swr = useSWRInfinite<SearchResult, Error>(
@@ -165,47 +124,54 @@ const ImageSearchContent = (): JSX.Element => {
           <ImageSearchInput
             setQueryString={setQueryString}
             setMediaType={setMediaType}
-            showMediaTypeToggle={showGraphicsToggle}
+            isNtb={isNtb}
           />
         </ViewHeader.Content>
         <ViewHeader.Action />
       </ViewHeader.Root>
 
       <View.Content>
-        {!queryString && (
-          <div className="text-gray-500 text-center py-8">
-            Skriv en sökterm för att börja söka
+        {swr.error && (
+          <div className='mx-3 mt-3 flex items-center gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 dark:border-red-900/50 dark:bg-red-950/30'>
+            <TriangleAlertIcon size={16} strokeWidth={1.75} className='shrink-0 text-red-500 dark:text-red-400' />
+            <span className='flex-1 text-sm text-red-700 dark:text-red-300'>
+              {t('imageSearch.labels.searchFailed')}
+            </span>
+            <Button
+              variant='outline'
+              size='sm'
+              className='shrink-0 gap-1.5 border-red-200 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/40'
+              onClick={() => void swr.mutate()}
+            >
+              <RotateCcwIcon size={13} strokeWidth={1.75} />
+              {t('imageSearch.labels.retry')}
+            </Button>
           </div>
         )}
-
-        {queryString && swr.data && swr.data.length > 0 && (
-          <div className="mb-4 px-4 pt-4 text-sm text-gray-600">
-            {total.toLocaleString()} {mediaType === 'graphic' ? 'grafik' : 'bilder'} från <span className="font-semibold capitalize">{provider}</span>
-          </div>
-        )}
-
-        {queryString && (
-          <div className="h-screen max-h-screen flex flex-col p-4 overflow-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              <InfiniteScroll
-                swr={swr}
-                loadingIndicator={<LoaderIcon size='32' color='#9ca3af' strokeWidth='2' />}
-                endingIndicator={<ListEndIcon size='32' color='#9ca3af' strokeWidth='2' />}
-                isReachingEnd={(swr) => {
-                  if (!swr.data || swr.data.length === 0) return true
-                  const lastPage = swr.data[swr.data.length - 1]
-                  return lastPage?.images.length === 0
-                }}
-              >
-                {(data: SearchResult) =>
-                  data.images.map((image: NormalizedImage) => (
-                    <ImageCard key={image.id} image={image} />
-                  ))
-                }
-              </InfiniteScroll>
-            </div>
-          </div>
-        )}
+        <ImageSearchResult total={0}>
+          <InfiniteScroll
+            swr={swr}
+            loadingIndicator={<LoaderIcon size='32' color='#9ca3af' strokeWidth='2' />}
+            endingIndicator={
+              swr.data?.[0]?.hits.length === 0
+                ? (
+                    <div className='flex flex-col items-center gap-2 text-muted-foreground'>
+                      <SearchIcon size={24} strokeWidth={1.75} />
+                      <span className='text-sm'>{t('imageSearch.labels.noResults')}</span>
+                    </div>
+                  )
+                : <ListEndIcon size='32' color='#9ca3af' strokeWidth='2' />
+            }
+            isReachingEnd={(swr) =>
+              swr.data?.[0]?.hits.length === 0
+              || (swr.data?.[swr.data?.length - 1]?.hits.length ?? 0) < SIZE}
+          >
+            {(data) =>
+              data.hits.map((hit) => (
+                <Thumbnail key={hit.id} hit={hit} />
+              ))}
+          </InfiniteScroll>
+        </ImageSearchResult>
       </View.Content>
     </View.Root>
   )
