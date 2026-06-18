@@ -25,7 +25,7 @@ import { Collaboration } from '@/defaults'
 import { defaultLocale } from '@/defaults/locale'
 import { setEnvironment } from '@/shared/getEnvironment'
 
-export type FeatureFlags = Record<string, string | boolean>
+export type FeatureFlags = Record<string, boolean>
 
 /** Registry registry provider state interface */
 export interface RegistryProviderState {
@@ -42,6 +42,8 @@ export interface RegistryProviderState {
     userUrl: URL
     faroUrl?: URL
     baboonUrl?: URL
+    /** Translation service. Optional — not all deployments have it. */
+    ntbUrl?: URL
   }
   envs: {
     imageSearchProvider: string

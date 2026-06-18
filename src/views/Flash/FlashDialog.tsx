@@ -1,12 +1,15 @@
 import {
   Awareness,
+  Newsvalue,
   Section,
   View
 } from '@/components'
 import type { DefaultValueOption, ViewProps } from '@/types'
 import { Alert, AlertDescription, AlertTitle, Button, Checkbox, ComboBox, Label } from '@ttab/elephant-ui'
 import { CircleXIcon, TagsIcon, GanttChartSquareIcon, NewspaperIcon, ZapIcon, InfoIcon, TriangleAlertIcon } from '@ttab/elephant-ui/icons'
-import { useRegistry, useSections } from '@/hooks'
+import { Newsvalues } from '@/defaults'
+import { useDocumentDefaults, useRegistry, useSections } from '@/hooks'
+import { useFeatureFlags } from '@/hooks/useFeatureFlags'
 import { useSession } from 'next-auth/react'
 import type { Dispatch, SetStateAction } from 'react'
 import { type JSX, useEffect, useMemo, useRef, useState } from 'react'
@@ -72,22 +75,24 @@ export const FlashDialog = (props: {
   const [relatedDocsSlugline, setSlugline] = useState<string>('') // slugline for complementary planning- and quick-article documents
   const { t } = useTranslation()
   const [invalidSlug, setInvalidSlug] = useState(false)
+  const { hasLooseSlugline } = useFeatureFlags(['hasLooseSlugline'])
+  const defaults = useDocumentDefaults()
 
   useEffect(() => {
-    if (selectedPlanning?.payload?.slugline) {
+    if (!hasLooseSlugline && selectedPlanning?.payload?.slugline) {
       setInvalidSlug(selectedPlanning.payload.slugline === relatedDocsSlugline)
     }
 
     return () => {
       setInvalidSlug(false)
     }
-  }, [relatedDocsSlugline, selectedPlanning])
+  }, [relatedDocsSlugline, selectedPlanning, hasLooseSlugline])
 
   const handleSubmit = (setCreatePrompt: Dispatch<SetStateAction<boolean>>): void => {
     // Only validate slug length if we also create a quick-article, OR if flash is added
     // to an already existing planning. For new plannings, empty sluglines are fine
     // as they can be changed at a later time.
-    if (shouldCreateQuickArticle) {
+    if (shouldCreateQuickArticle && !hasLooseSlugline) {
       if (!relatedDocsSlugline.length) {
         setInvalidSlug(true)
         return
@@ -119,7 +124,11 @@ export const FlashDialog = (props: {
 
     const { deliverableId, payload, text } = quickArticleData
 
-    const quickArticleDocument = quickArticleDocumentTemplate(deliverableId, payload, text)
+    const quickArticleDocument = quickArticleDocumentTemplate(
+      deliverableId,
+      { ...defaults, ...payload },
+      text
+    )
 
     void (async () => {
       await repository?.saveDocument(
@@ -368,6 +377,13 @@ export const FlashDialog = (props: {
             {!selectedPlanning && props.asDialog && (
               <Form.Group icon={TagsIcon}>
                 <Section ydoc={ydoc} path='links.core/section[0]' onSelect={setSection} />
+                {isHast && (
+                  <Newsvalue
+                    ydoc={ydoc}
+                    path='meta.core/newsvalue[0].value'
+                    options={Newsvalues.filter((nv) => Number(nv.value) >= 4)}
+                  />
+                )}
               </Form.Group>
             )}
             {!isHast && (
@@ -390,7 +406,7 @@ export const FlashDialog = (props: {
                 </div>
               </Form.Group>
             )}
-            {!isHast && shouldCreateQuickArticle && (
+            {!isHast && shouldCreateQuickArticle && !hasLooseSlugline && (
               <Form.Group icon={TagsIcon}>
                 <div className='w-1/2 relative'>
                   {invalidSlug && (
@@ -437,7 +453,7 @@ export const FlashDialog = (props: {
               <Alert className='bg-red-300/35'>
                 <InfoIcon size={18} strokeWidth={1.75} className='text-muted-foreground' />
                 <AlertTitle>
-                  {t(isHast ? 'flash:createHastAlertTitle' : 'flash:createFlashAlertTitle')}
+                  {t('flash:createAlertTitle', { type: t(isHast ? 'flash:hastLabel' : 'flash:title') })}
                 </AlertTitle>
                 <AlertDescription>
                   {!selectedPlanning

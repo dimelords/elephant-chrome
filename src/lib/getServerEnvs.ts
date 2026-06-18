@@ -10,6 +10,8 @@ interface ServerUrls {
   faroUrl: URL
   baboonUrl: URL
   imageSearchUrl: URL
+  /** Translation service. Optional — not all deployments have it configured. */
+  ntbUrl?: URL
 }
 
 interface ServerEnvs {
@@ -18,7 +20,7 @@ interface ServerEnvs {
   environment: string
 }
 
-type FeatureFlags = Record<string, string | boolean>
+type FeatureFlags = Record<string, boolean>
 
 interface ServerConfig {
   urls: ServerUrls
@@ -52,6 +54,16 @@ export async function getServerEnvs(): Promise<ServerConfig> {
       urls[field] = new URL(value)
     }
 
+    // Optional URLs — empty values mean the corresponding feature is not
+    // configured for this deployment, not a misconfiguration.
+    const optionalUrlAttributes = ['ntbUrl']
+    for (const field of optionalUrlAttributes) {
+      const value = data[field]
+      if (typeof value === 'string' && value !== '') {
+        urls[field] = new URL(value)
+      }
+    }
+
     if (!data['systemLanguage'] || typeof data['systemLanguage'] !== 'string') {
       throw new Error('missing \'systemLanguage\' server environment variable')
     }
@@ -72,7 +84,9 @@ export async function getServerEnvs(): Promise<ServerConfig> {
       },
       featureFlags: {
         hasPrint: data['hasPrint'] ? !!data['hasPrint'] : false,
-        hasHast: data['hasHast'] ? !!data['hasHast'] : false
+        hasHast: data['hasHast'] ? !!data['hasHast'] : false,
+        hasLooseSlugline: data['hasLooseSlugline'] ? !!data['hasLooseSlugline'] : false,
+        hasVignette: data['hasVignette'] ? !!data['hasVignette'] : false
       }
     }
   } catch (ex) {

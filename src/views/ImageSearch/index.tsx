@@ -6,10 +6,11 @@ import { Button } from '@ttab/elephant-ui'
 import useSWRInfinite from 'swr/infinite'
 import { SWRConfig } from 'swr'
 import { createTTFetcher } from './lib/ttFetcher'
-import { createNTBFetcher } from './lib/ntbFetcher'
+import { createNTBFetcher, NPK_DISTRIBUTOR, NPK_UNIT, type NTBDistributor } from './lib/ntbFetcher'
 import { useRegistry } from '@/hooks/useRegistry'
+import { useHasUnit } from '@/hooks'
 import { useSession } from 'next-auth/react'
-import type { ImageSearchResult as SearchResult } from './lib/types'
+import type { ImageSearchKey, ImageSearchResult as SearchResult } from './lib/types'
 import { Error } from '../Error'
 import { useTranslation } from 'react-i18next'
 import InfiniteScroll from './InfiniteScroll'
@@ -84,14 +85,17 @@ const ImageSearchContent = ({
   mediaType: MediaTypes
   isNtb: boolean
 }): JSX.Element => {
+  const isNpkUser = useHasUnit(NPK_UNIT)
   const [queryString, setQueryString] = useState('')
+  const [distributorNames, setDistributorNames] = useState<NTBDistributor[]>(
+    isNpkUser ? [NPK_DISTRIBUTOR] : []
+  )
   const SIZE = 10
   const { t } = useTranslation('views')
 
   const swr = useSWRInfinite<SearchResult, Error>(
-    (index) => {
-      if (!queryString) return null
-      return [queryString, mediaType, index + 1] // Pages start at 1
+    (index): ImageSearchKey => {
+      return [queryString, index, SIZE, mediaType, distributorNames]
     },
     {
       revalidateFirstPage: false
@@ -124,6 +128,8 @@ const ImageSearchContent = ({
           <ImageSearchInput
             setQueryString={setQueryString}
             setMediaType={setMediaType}
+            distributorNames={distributorNames}
+            setDistributorNames={setDistributorNames}
             isNtb={isNtb}
           />
         </ViewHeader.Content>

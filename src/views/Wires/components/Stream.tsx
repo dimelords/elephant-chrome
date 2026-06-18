@@ -328,16 +328,6 @@ export const Stream = memo(({
     return () => scrollContainer.removeEventListener('scroll', handleScroll)
   }, [isLoading, data])
 
-  const filterStatuses = (wires: Wire[], wireStatusFilter: WireFilter): Wire[] => {
-    const selectedStatuses = new Set(wireStatusFilter.values)
-
-    return wires.filter((wire) => {
-      const currentStatus = getWireState(wire)
-      const lastStatus = getWireStatus(wire)
-      return selectedStatuses.has(currentStatus.status) || selectedStatuses.has(lastStatus)
-    })
-  }
-
   // Convert selected wires array to TanStack Table format
   const rowSelection = useMemo<RowSelectionState>(() => {
     const selection: RowSelectionState = {}
@@ -406,7 +396,7 @@ export const Stream = memo(({
       if (!shiftAnchorRef.current) {
         shiftAnchorRef.current = entryId
         const currentWire = allDataRef.current.find((w) => w.id === entryId)
-        if (currentWire && getWireState(currentWire).status !== 'used') {
+        if (currentWire) {
           onToggleWire(currentWire, true)
           lastToggledWireIdRef.current = entryId
         }
@@ -422,7 +412,7 @@ export const Stream = memo(({
 
       if (movingAway) {
         const nextWire = allDataRef.current.find((w) => w.id === nextEntryId)
-        if (nextWire && getWireState(nextWire).status !== 'used') {
+        if (nextWire) {
           onToggleWire(nextWire, true)
           lastToggledWireIdRef.current = nextEntryId
         }
@@ -620,3 +610,13 @@ export const Stream = memo(({
 })
 
 Stream.displayName = 'Stream'
+
+function filterStatuses(wires: Wire[], wireStatusFilter: WireFilter): Wire[] {
+  const selectedStatuses = new Set(wireStatusFilter.values)
+
+  return wires.filter((wire) => {
+    const currentStatus = getWireState(wire)
+    const lastStatus = getWireStatus(wire)
+    return selectedStatuses.has(currentStatus.status) || selectedStatuses.has(lastStatus)
+  })
+}

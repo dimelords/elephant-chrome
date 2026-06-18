@@ -10,11 +10,12 @@ import { useWorkflowStatus } from '@/hooks/useWorkflowStatus'
 import { Editor as PlainEditor } from '@/components/PlainEditor'
 import { getTemplateFromView } from '@/shared/templates/lib/getTemplateFromView'
 import { useRegistry } from '@/hooks/useRegistry'
+import { useDocumentDefaults } from '@/hooks/useDocumentDefaults'
 import { toGroupedNewsDoc } from '@/shared/transformations/groupedNewsDoc'
 import type { YDocument } from '@/modules/yjs/hooks'
 import type { Document } from '@ttab/elephant-api/newsdoc'
 import { DocumentHeader } from '@/components/QuickDocument/DocumentHeader'
-import { useDeliverablePlanningId } from '@/hooks/index/useDeliverablePlanningId'
+import { useDeliverableInfo } from '@/hooks/useDeliverableInfo'
 import { useTranslation } from 'react-i18next'
 
 const meta: ViewMetadata = {
@@ -41,6 +42,7 @@ export const Flash = (props: ViewProps & {
   const { featureFlags } = useRegistry()
   const { t } = useTranslation('flash')
   const hasHast = !!featureFlags.hasHast
+  const defaults = useDocumentDefaults()
 
   const persistentDocumentId = useRef<string>('')
   if (!persistentDocumentId.current) {
@@ -49,7 +51,7 @@ export const Flash = (props: ViewProps & {
 
   // We must not read query.id if we are in a dialog or we pick up other documents ids
   const documentId = props.id || (!props.asDialog && query.id) || persistentDocumentId.current
-  const planningId = useDeliverablePlanningId(documentId as string || '')
+  const planningId = useDeliverableInfo(documentId as string || '')?.planningUuid ?? ''
 
   const data = useMemo(() => {
     if (!documentId || typeof documentId !== 'string') {
@@ -61,9 +63,12 @@ export const Flash = (props: ViewProps & {
       isMetaDocument: false,
       mainDocument: '',
       subset: [],
-      document: props.document || getTemplateFromView('Flash', { useHast: hasHast })(documentId)
+      document: props.document || getTemplateFromView('Flash', { useHast: hasHast })(
+        documentId,
+        { ...defaults }
+      )
     })
-  }, [documentId, props.document, hasHast])
+  }, [documentId, props.document, hasHast, defaults])
 
   // Error handling for missing document
   if ((!props.asDialog && !documentId) || typeof documentId !== 'string') {
@@ -75,9 +80,9 @@ export const Flash = (props: ViewProps & {
     )
   }
 
-  // If published or specific version has be specified
-  if (workflowStatus?.name === 'usable' || props.version || workflowStatus?.name === 'unpublished') {
-    const bigIntVersion = workflowStatus?.name === 'usable'
+  // If published, withheld or specific version has be specified
+  if (workflowStatus?.name === 'usable' || workflowStatus?.name === 'withheld' || props.version || workflowStatus?.name === 'unpublished') {
+    const bigIntVersion = workflowStatus?.name === 'usable' || workflowStatus?.name === 'withheld'
       ? workflowStatus?.version
       : BigInt(props.version ?? 0)
 
