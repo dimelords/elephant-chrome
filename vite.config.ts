@@ -15,9 +15,9 @@ export default defineConfig(({ mode }) => {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
   }
 
-  const devServerPort = parsePort(env.VITE_DEV_SERVER_PORT, 5173)
-  const devHmrPort = parsePort(env.VITE_HMR_PORT, 5183)
+  const devServerPort = parsePort(env.PORT, 5183)
   const BASE_URL = env.BASE_URL || '/elephant'
+  const isHttps = env.PROTOCOL === 'https'
 
   return {
     port: devServerPort,
@@ -57,9 +57,7 @@ export default defineConfig(({ mode }) => {
       })
     },
     server: {
-      hmr: {
-        port: devHmrPort
-      },
+      hmr: false,
       watch: {
         awaitWriteFinish: true
       },

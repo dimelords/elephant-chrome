@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.BASE_URL || ''
+const BASE_URL = (import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL) || ''
 
 interface ServerUrls {
   webSocketUrl: URL
@@ -13,7 +13,8 @@ interface ServerUrls {
 }
 
 export async function getServerUrls(): Promise<ServerUrls> {
-  const response = await fetch(`${BASE_URL}/api/urls`)
+  const apiUrl = `${window.location.origin}${BASE_URL}/api/urls`
+  const response = await fetch(apiUrl)
 
   if (!response.ok) {
     throw new Error(`Failed fetching remote server urls, got response ${response.status}`)

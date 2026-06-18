@@ -1,5 +1,5 @@
 function assertEnvs(): void {
-  const envs = [
+  const requiredEnvs = [
     'AUTH_KEYCLOAK_ISSUER',
     'AUTH_KEYCLOAK_SECRET',
     'AUTH_KEYCLOAK_ID',
@@ -21,7 +21,7 @@ function assertEnvs(): void {
     'SYSTEM_LANGUAGE'
   ]
 
-  envs.forEach((env) => {
+  requiredEnvs.forEach((env) => {
     if (!process.env[env]) {
       throw new Error(`Environment variable ${env} is required`)
     }

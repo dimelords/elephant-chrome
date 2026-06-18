@@ -3,10 +3,11 @@ import type { RequestHandler, Express } from 'express-serve-static-core'
 import expressWebsockets from 'express-ws'
 import cors from 'cors'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import type http from 'node:http'
-import https from 'node:https'
 import fs from 'node:fs'
+import http from 'node:http'
+import https from 'node:https'
+import { fileURLToPath } from 'node:url'
+import { createProxyMiddleware } from 'http-proxy-middleware'
 
 import { connectRouteHandlers, mapRoutes } from './routes.js'
 import ViteExpress from 'vite-express'
@@ -27,6 +28,7 @@ import assertEnvs from './lib/assertEnvs.js'
 import { setSystemLanguage } from '@/shared/getSystemLanguage.js'
 import { authSessionMiddleware } from './utils/authSession.js'
 
+import os from 'node:os'
 import Pyroscope from '@pyroscope/nodejs'
 import { createRemoteJWKSet } from 'jose'
 
@@ -65,7 +67,23 @@ export async function runServer(): Promise<string> {
   }
 
   const { apiDir, distDir } = getPaths()
-  const wsInstance = expressWebsockets(express())
+
+  // Create the underlying Node server first so we can pass it to expressWebsockets.
+  // This ensures WebSocket routes (collab) and Vite HMR both share the same socket,
+  // avoiding split-server confusion where express-ws creates a hidden internal server.
+  const expresApp = express()
+  const nodeServer: http.Server | https.Server =
+    NODE_ENV === 'development' && PROTOCOL === 'https'
+      ? https.createServer(
+          {
+            key: fs.readFileSync(path.join(os.homedir(), '.config', 'mkcert', 'localhost-key.pem')),
+            cert: fs.readFileSync(path.join(os.homedir(), '.config', 'mkcert', 'localhost.pem'))
+          },
+          expresApp
+        )
+      : http.createServer(expresApp)
+
+  const wsInstance = expressWebsockets(expresApp, nodeServer)
   const { app } = wsInstance
 
 
@@ -88,7 +106,8 @@ export async function runServer(): Promise<string> {
     AUTH_KEYCLOAK_PROVIDER,
     AUTH_KEYCLOAK_ID,
     AUTH_KEYCLOAK_SECRET,
-    AUTH_KEYCLOAK_IDP_HINT
+    AUTH_KEYCLOAK_IDP_HINT,
+    `${PROTOCOL}://${HOST}:${PORT}${BASE_URL}`
   ).catch((e) => {
     throw new Error('configure authentication', { cause: e })
   })
@@ -106,6 +125,56 @@ export async function runServer(): Promise<string> {
   const user = new User(USER_URL, userTokenService)
 
   app.set('trust proxy', true)
+
+  // Proxy backend services — keeps all traffic on the single dev port
+  // and avoids CORS issues between Vite and the backend services
+
+  // Root-level legacy routes: the frontend constructs some URLs using new URL('/sse', base)
+  // and new URL('/twirp/...', base) with absolute paths, which strips the BASE_URL prefix.
+  // These routes catch those requests and forward them to the correct service.
+  app.use('/sse', createProxyMiddleware({
+    target: 'http://localhost:1080',
+    changeOrigin: true
+  }))
+
+  // Express app.use() only matches at '/' boundaries, so '/twirp/elephant.spell'
+  // would NOT match '/twirp/elephant.spell.Dictionaries/...' (dot, not slash).
+  // Use a regex to match the dot-separated Twirp service name.
+  app.use(/^\/twirp\/elephant\.spell/, createProxyMiddleware({
+    target: 'http://localhost:1380',
+    changeOrigin: true
+  }))
+
+  app.use(`${BASE_URL}/api/repository`, createProxyMiddleware({
+    target: 'http://localhost:1080',
+    pathRewrite: { [`^${BASE_URL}/api/repository`]: '/twirp' },
+    changeOrigin: true
+  }))
+  
+  app.use(`${BASE_URL}/api/index`, createProxyMiddleware({
+    target: 'http://localhost:1082',
+    pathRewrite: { [`^${BASE_URL}/api/index`]: '/twirp' },
+    changeOrigin: true
+  }))
+  
+  app.use(`${BASE_URL}/api/user`, createProxyMiddleware({
+    target: 'http://localhost:1083',
+    pathRewrite: { [`^${BASE_URL}/api/user`]: '/twirp' },
+    changeOrigin: true
+  }))
+  
+  app.use(`${BASE_URL}/api/spellcheck`, createProxyMiddleware({
+    target: 'http://localhost:1380',
+    pathRewrite: { [`^${BASE_URL}/api/spellcheck`]: '' },
+    changeOrigin: true
+  }))
+  
+  app.use(`${BASE_URL}/api/faro`, createProxyMiddleware({
+    target: 'http://localhost:12346',
+    pathRewrite: { [`^${BASE_URL}/api/faro`]: '' },
+    changeOrigin: true
+  }))
+  
   app.use(`${BASE_URL}/api/auth/*`, ExpressAuth(authInfo.authConfig) as RequestHandler)
   app.use(`${BASE_URL}/api/documents`, (req, res, next) => {
     assertAuthenticatedUser(BASE_URL, authInfo.authConfig, JWKS)(req, res, next).catch(next)
@@ -117,19 +186,9 @@ export async function runServer(): Promise<string> {
   app.use(cors({
     credentials: true,
     origin: `${PROTOCOL}://${HOST}:${PORT}`
-
   }))
   app.use(BASE_URL, express.json({ limit: '1mb' }))
   app.use(authSessionMiddleware(BASE_URL, authInfo.authConfig))
-
-  app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
-    if (err) {
-      req.log.error({ err }, 'Error occurred')
-      res.status(500).send('Internal Server Error')
-    } else {
-      next()
-    }
-  })
 
   // Create collaboration and hocuspocus server
   const collaborationServer = new CollaborationServer({
@@ -151,8 +210,8 @@ export async function runServer(): Promise<string> {
 
   // Listen on both base path (for shared WebSocket) and document-specific path
   await collaborationServer.listen([
-    `${BASE_URL}/:document`,  // Legacy: per-document WebSocket
-    `${BASE_URL}`             // Shared WebSocket for all documents
+    `${BASE_URL}/api/collab/:document`,  // Legacy: per-document WebSocket
+    `${BASE_URL}/api/collab`             // Shared WebSocket for all documents
   ]).catch((ex) => {
     throw new Error(`start collaboration server on port ${PORT}`, { cause: ex })
   })
@@ -161,6 +220,16 @@ export async function runServer(): Promise<string> {
     repository,
     cache: redis,
     collaborationServer
+  })
+
+  // Error handler must be registered AFTER all routes
+  app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
+    if (err) {
+      req.log.error({ err }, 'Error occurred')
+      res.status(500).send('Internal Server Error')
+    } else {
+      next()
+    }
   })
 
 
@@ -245,13 +314,13 @@ export async function runServer(): Promise<string> {
 
   switch (NODE_ENV) {
     case 'development': {
-      ViteExpress.listen(app as unknown as Express, PORT, () => {
-        logger.info(`Development Server running on ${serverUrl}`)
-        // Start HTTPS only after Vite middleware is injected, otherwise
-        // requests for /src/* would fall through to the catch-all.
-        startHttpsServer()
+      // Await bind so Vite's HMR upgrade handler is registered on nodeServer
+      // before it starts accepting connections. Without await there is a race
+      // between server.listen() and Vite's async createServer() completing.
+      await ViteExpress.bind(app as unknown as Express, nodeServer)
+      nodeServer.listen(PORT, HOST, () => {
+        logger.info(`Development server running on ${serverUrl}`)
       })
-
       break
     }
     case 'production': {
@@ -261,10 +330,7 @@ export async function runServer(): Promise<string> {
       app.get('*', (_, res) => {
         res.sendFile(path.join(distDir, 'index.html'))
       })
-      app.listen(PORT, () => {
-        logger.info(`HTTP server listening on port ${PORT}`)
-      })
-
+      nodeServer.listen(PORT)
       startHttpsServer()
 
       break

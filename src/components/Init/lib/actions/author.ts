@@ -107,7 +107,6 @@ export async function initializeAuthor({ url, session, repository, t }: {
 
     const isValid = verifyAuthorDoc(authorDoc, envRole, session, t)
     if (isValid) {
-      console.info('Author document exist and is valid')
       return true
     }
 
@@ -117,8 +116,13 @@ export async function initializeAuthor({ url, session, repository, t }: {
       : createAuthorDoc(session, envRole, getSystemLanguage())
 
     const result = await repository.saveDocument(document, session.accessToken, 'usable')
+    
+    if (!result) {
+      throw new Error('Failed to save author document: no result returned')
+    }
+    
     if (result?.status.code !== 'OK') {
-      throw new Error(`Failed to ${operation} author doc`)
+      throw new Error(`Failed to ${operation} author doc: ${result?.status.code} - ${result?.status.message}`)
     }
 
     if (operation === 'update') {
@@ -199,8 +203,6 @@ function appendSub(document: Document, session: Session, role: 'stage' | 'prod')
   if (!session.user?.sub) {
     throw new Error('No sub in session')
   }
-
-  console.log(session.user.sub)
 
   if (!Array.isArray(document.links)) {
     document.links = []

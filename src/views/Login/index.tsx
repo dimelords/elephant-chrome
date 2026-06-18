@@ -45,7 +45,7 @@ const LoginForm = ({ callbackUrl }: {
               // FIXME: Implement a better approach so we do not remove unsynced documents
               // await CollaborationClientRegistry.cleanupLocalDocuments()
             })().catch((err) => console.error(err))
-            signIn('keycloak', { callbackUrl: callbackUrl || import.meta.env.BASE_URL })
+            signIn('keycloak', { callbackUrl: callbackUrl || `https://localhost:5173${import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL}` })
               .catch((error) => console.error(error))
           }}
           size='lg'
@@ -88,7 +88,7 @@ const LoginAutomatic = ({ callbackUrl }: {
 }): JSX.Element => {
   const { t } = useTranslation('views')
   useEffect(() => {
-    signIn('keycloak', { callbackUrl: callbackUrl || import.meta.env.BASE_URL })
+    signIn('keycloak', { callbackUrl: callbackUrl || `https://localhost:5173${import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL}` })
       .catch((error) => console.error(error))
   }, [callbackUrl])
   return <LoadingText>{t('login.loggingIn')}</LoadingText>

@@ -280,17 +280,17 @@ function EditorWrapper(props: ViewProps & {
       </BaseEditor.Root>
 
       {/* GenAI Loading Indicator */}
-      <GenAILoading visible={genaiLoading} />
+      {/* <GenAILoading visible={genaiLoading} /> */}
 
       {/* GenAI Suggestions Panel */}
-      {genaiSuggestions.length > 0 && (
+      {/* {genaiSuggestions.length > 0 && (
         <GenAISuggestions
           suggestions={genaiSuggestions}
           selectedText={genaiSelectedText}
           onApply={handleApplySuggestion}
           onDismiss={handleDismissSuggestions}
         />
-      )}
+      )} */}
     </View.Root>
   )
 }

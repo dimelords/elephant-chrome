@@ -5,11 +5,14 @@ import { View } from '../components'
 import { Login } from '../views'
 import { useTranslation } from 'react-i18next'
 
-export const SessionProvider = ({ children }: PropsWithChildren) => (
-  <NextSessionProvider refetchOnWindowFocus={false} basePath={`${import.meta.env.BASE_URL}/api/auth`} refetchInterval={150}>
-    <Session>{children}</Session>
-  </NextSessionProvider>
-)
+export const SessionProvider = ({ children }: PropsWithChildren) => {
+  const baseUrl = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL
+  return (
+    <NextSessionProvider refetchOnWindowFocus={false} basePath={`${baseUrl}/api/auth`} refetchInterval={150}>
+      <Session>{children}</Session>
+    </NextSessionProvider>
+  )
+}
 
 const Session = ({ children }: PropsWithChildren) => {
   const { status, data: session } = useSession()

@@ -13,14 +13,9 @@
     "arm64"
   ],
   "scripts": {
-    "debug": "concurrently npm:debug:backend",
-    "debug:backend": "tsx watch --inspect --ignore vite.config.ts.timestamp* --env-file=.env src-srv/index.ts",
-    "dev": "bash scripts/dev-with-coordination.sh",
-    "dev:server": "tsx watch --ignore vite.config.ts.timestamp* --env-file=.env src-srv/index.ts",
+    "debug": "NODE_EXTRA_CA_CERTS=$HOME/.config/mkcert/rootCA.pem tsx watch --ignore '**/*timestamp*' --inspect --env-file=.env src-srv/index.ts",
+    "dev": "NODE_EXTRA_CA_CERTS=$HOME/.config/mkcert/rootCA.pem tsx watch --ignore '**/*timestamp*' --env-file=.env src-srv/index.ts",
     "dev:client": "vite",
-    "dev:backend": "tsx watch --ignore vite.config.ts.timestamp* --env-file=.env src-srv/index.ts",
-    "dev:frontend": "vite",
-    "dev:client:web": "vite",
     "build:server": "tsc --project ./src-srv/ && tsc-alias -p ./src-srv/tsconfig.json",
     "build:client": "tsc && vite build",
     "build": "NODE_ENV=production && npm run build:client && npm run build:server",

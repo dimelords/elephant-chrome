@@ -1,6 +1,43 @@
 # Elephant Chrome
 
-This is the main Elephant application. Start using `npm run dev:web` && `npm run dev:css`
+This is the main Elephant application.
+
+## Quick Start
+
+```bash
+# Start development environment (recommended)
+npm run dev
+
+# This starts both Express and Vite with proper coordination:
+# 1. Express server (HTTP) on http://localhost:3001
+# 2. Vite dev server (HTTPS) on https://localhost:5173
+```
+
+**Alternative (manual startup)**:
+```bash
+# Terminal 1: Start Express server
+npm run dev:server
+
+# Terminal 2: Start Vite dev server (after Express is ready)
+npm run dev:client
+```
+
+**Legacy commands** (still available):
+```bash
+npm run dev:web   # Vite only (requires Express running separately)
+npm run dev:css   # CSS compilation (if needed)
+```
+
+## Architecture
+
+The development environment uses:
+- **Vite** (HTTPS on port 5173) - Serves React app, handles HTTPS termination
+- **Express** (HTTP on port 3001) - Handles auth, collaboration, proxies to backend services
+- **Backend Services** (HTTP) - Repository, Index, User, Spellcheck, Faro (in Docker)
+
+All API requests flow: Browser → Vite (HTTPS) → Express (HTTP) → Backend Services (HTTP)
+
+See `docs/https-architecture.md` for detailed architecture documentation.
 
 # Development info
 
@@ -121,3 +158,57 @@ brew install caddy #MacOS
 sudo apt install caddy #Debian/Ubuntu
 nix-shell -p caddy #Nixos
 ```
+
+## Troubleshooting
+
+### Development Server Issues
+
+**Problem**: 502 Bad Gateway on API requests
+
+**Solution**:
+```bash
+# Check Express is running
+curl http://localhost:3001/api/health
+
+# Check backend services
+docker ps | grep -E "repository|index|user"
+
+# Restart with coordination
+npm run dev
+```
+
+**Problem**: Certificate warnings in browser
+
+**Solution**:
+```bash
+# Reinstall mkcert CA
+mkcert -install
+
+# Regenerate certificates
+cd ../elephant-handbook
+./scripts/setup-certs.sh
+
+# Restart browser
+```
+
+**Problem**: Startup coordination fails
+
+**Solution**:
+```bash
+# Check port 3001 is available
+lsof -i :3001
+
+# Make script executable
+chmod +x scripts/dev-with-coordination.sh
+
+# Check Express logs
+npm run dev:server
+```
+
+### Common Issues
+
+- **HMR not working**: Check `VITE_HMR_PORT=5174` in `.env` and verify WSS protocol
+- **Auth errors**: Verify Keycloak is running and `AUTH_KEYCLOAK_ISSUER` uses HTTPS
+- **Proxy errors**: Ensure Express started before Vite (use `npm run dev`)
+
+See `docs/https-architecture.md` for detailed troubleshooting.
