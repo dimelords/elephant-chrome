@@ -61,7 +61,7 @@ export const WireCreation = (props: ViewProps & {
       ...defaults,
       meta: {
         'tt/slugline': [Block.create({ type: 'tt/slugline' })],
-        'core/newsvalue': [Block.create({ type: 'core/newsvalue' })]
+        'core/newsvalue': [Block.create({ type: 'core/newsvalue', value: '3' })]
       },
       links: {
         'tt/wire': ttWireLinks,

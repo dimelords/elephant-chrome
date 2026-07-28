@@ -107,7 +107,7 @@ export function buildFallbackPlanning({
         start_date: targetDate
       }
     }),
-    newsvalue ? Block.create({ ...newsvalue }) : Block.create({ type: 'core/newsvalue' }),
+    newsvalue ? Block.create({ ...newsvalue }) : Block.create({ type: 'core/newsvalue', value: '3' }),
     ...(slugline && !isEmptySlugline(slugline) ? [Block.create({ ...slugline })] : []),
     Block.create({
       type: 'core/description',

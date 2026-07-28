@@ -55,3 +55,6 @@ PYROSCOPE_URL=
 
 SYSTEM_LANGUAGE=
 
+# Deployment environment label (required by client envs check, e.g. local | staging | production)
+ENVIRONMENT=
+

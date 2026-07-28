@@ -80,7 +80,7 @@
     }
   },
   "login": {
-    "loginWith": "Logga in med",
+    "loginWith": "Logga in",
     "rememberMe": "Kom ihåg mig nästa gång",
     "loggingIn": "Loggar in..."
   },

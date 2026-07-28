@@ -112,7 +112,9 @@ export const RegistryProvider = ({ children }: PropsWithChildren): JSX.Element =
         const index = new Index(server.indexUrl.href)
         const spellchecker = new Spellchecker(server.spellcheckUrl.href)
         const user = new User(server.userUrl.href)
-        const baboon = new Baboon(server.baboonUrl.href)
+        const baboon = server.baboonUrl
+          ? new Baboon(server.baboonUrl.href)
+          : undefined
         const ntb = envs.imageSearchProvider === 'ntb'
           ? new NTB(server.imageSearchUrl.href)
           : undefined

@@ -8,8 +8,9 @@ interface ServerUrls {
   spellcheckUrl: URL
   userUrl: URL
   faroUrl: URL
-  baboonUrl: URL
   imageSearchUrl: URL
+  /** Print backend. Optional — not all deployments have it configured. */
+  baboonUrl?: URL
   /** Translation service. Optional — not all deployments have it configured. */
   ntbUrl?: URL
 }
@@ -39,7 +40,7 @@ export async function getServerEnvs(): Promise<ServerConfig> {
     const data = await response.json() as Record<string, unknown>
     const urlAttributes = [
       'webSocketUrl', 'indexUrl', 'repositoryUrl', 'imageSearchUrl',
-      'spellcheckUrl', 'userUrl', 'faroUrl', 'baboonUrl'
+      'spellcheckUrl', 'userUrl', 'faroUrl'
     ]
 
     const urls = {} as Record<string, URL>
@@ -56,7 +57,7 @@ export async function getServerEnvs(): Promise<ServerConfig> {
 
     // Optional URLs — empty values mean the corresponding feature is not
     // configured for this deployment, not a misconfiguration.
-    const optionalUrlAttributes = ['ntbUrl']
+    const optionalUrlAttributes = ['ntbUrl', 'baboonUrl']
     for (const field of optionalUrlAttributes) {
       const value = data[field]
       if (typeof value === 'string' && value !== '') {

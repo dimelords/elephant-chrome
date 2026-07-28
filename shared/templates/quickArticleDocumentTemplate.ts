@@ -30,7 +30,8 @@ export function quickArticleDocumentTemplate(id: string, payload?: TemplatePaylo
     ],
     meta: [
       ...payload?.meta?.['core/newsvalue'] || [Block.create({
-        type: 'core/newsvalue'
+        type: 'core/newsvalue',
+        value: '3'
       })],
       ...payload?.meta?.['tt/slugline'] || [Block.create({
         type: 'tt/slugline'

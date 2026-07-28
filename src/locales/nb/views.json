@@ -80,7 +80,7 @@
     }
   },
   "login": {
-    "loginWith": "Logg inn med",
+    "loginWith": "Logg inn",
     "rememberMe": "Husk meg neste gang",
     "loggingIn": "Logger inn..."
   },

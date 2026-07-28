@@ -52,7 +52,8 @@ export function planningDocumentTemplate(documentId: string, payload?: TemplateP
       })],
 
       ...payload?.meta?.['core/newsvalue'] || [Block.create({
-        type: 'core/newsvalue'
+        type: 'core/newsvalue',
+        value: '3'
       })],
 
       ...payload?.meta?.['tt/slugline'] || [Block.create({
