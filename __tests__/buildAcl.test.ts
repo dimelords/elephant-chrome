@@ -50,32 +50,24 @@ describe('Repository.saveDocument ACL', () => {
     repo = new Repository('http://localhost')
   })
 
-  it('sends redaktionen ACL for regular user', async () => {
-    const token = makeJwt({ units: ['/redaktionen'] })
+  it('grants ACL to the user\'s own unit', async () => {
+    const token = makeJwt({ units: ['unit://dimelords/newsroom'] })
     await repo.saveDocument(minimalDocument as never, token)
 
     expect(getAclFromLastCall()).toEqual([
-      { uri: 'core://unit/redaktionen', permissions: ['r', 'w'] }
+      { uri: 'unit://dimelords/newsroom', permissions: ['r', 'w'] }
     ])
   })
 
-  it('sends redaktionen-npk ACL for NPK user', async () => {
-    const token = makeJwt({ units: ['/redaktionen-npk'] })
-    await repo.saveDocument(minimalDocument as never, token)
-
-    expect(getAclFromLastCall()).toEqual([
-      { uri: 'core://unit/redaktionen-npk', permissions: ['r', 'w'] }
-    ])
-  })
-
-  it('sends redaktionen-npk ACL when user has multiple units including NPK', async () => {
+  it('grants ACL to every unit the user belongs to', async () => {
     const token = makeJwt({
-      units: ['/redaktionen', '/redaktionen-npk', '/other']
+      units: ['unit://dimelords/newsroom', 'unit://dimelords/sports']
     })
     await repo.saveDocument(minimalDocument as never, token)
 
     expect(getAclFromLastCall()).toEqual([
-      { uri: 'core://unit/redaktionen-npk', permissions: ['r', 'w'] }
+      { uri: 'unit://dimelords/newsroom', permissions: ['r', 'w'] },
+      { uri: 'unit://dimelords/sports', permissions: ['r', 'w'] }
     ])
   })
 

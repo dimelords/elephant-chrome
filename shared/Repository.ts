@@ -29,13 +29,19 @@ import { decodeJwt } from 'jose'
 import { meta } from './meta.js'
 import { getSystemLanguage } from '@/shared/getSystemLanguage.js'
 
+/**
+ * Grant read/write access to every unit the user actually belongs to
+ * (per their token's `units` claim), so documents are visible to their
+ * own team(s) regardless of deployment-specific unit naming. Falls back
+ * to a generic default unit only if the token has no units at all.
+ */
 function buildAcl(accessToken: string): Array<{ uri: string, permissions: string[] }> {
   try {
     const decoded = decodeJwt(accessToken)
     const units = Array.isArray(decoded.units) ? decoded.units as string[] : []
 
-    if (units.includes('/redaktionen-npk')) {
-      return [{ uri: 'core://unit/redaktionen-npk', permissions: ['r', 'w'] }]
+    if (units.length > 0) {
+      return units.map((uri) => ({ uri, permissions: ['r', 'w'] }))
     }
   } catch {
     // JWT decode failure → fall back to default ACL
