@@ -92,7 +92,7 @@ export async function createAuthInfo(
         if (account && user) {
           if (account.access_token) {
             // @ts-expect-error sub exists
-            user.sub = account.providerAccountId
+            user.sub = `keycloak://user/${account.providerAccountId}`
           }
 
           // Extract units and org from the JWT access token
